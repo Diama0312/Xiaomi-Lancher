@@ -1,0 +1,2505 @@
+<!DOCTYPE html>
+<html lang="el" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xiaomi TV Max 85" (2025) — Custom TV OS</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* =========================================================
+           1. ZERO SCROLLBARS MANDATE (GLOBAL & ALL CONTAINERS)
+           ========================================================= */
+        *, html, body {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-font-smoothing: antialiased;
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
+        }
+
+        *::-webkit-scrollbar,
+        html::-webkit-scrollbar,
+        body::-webkit-scrollbar {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+            background: transparent !important;
+        }
+
+        body {
+            background-color: #040508;
+            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            transition: filter 0.45s ease;
+        }
+
+        /* =========================================================
+           2. 144Hz TV FOCUS RING & FLUID SCALING (NO CLIPPING)
+           ========================================================= */
+        .tv-focusable {
+            transition: transform 0.22s cubic-bezier(0.2, 0.85, 0.25, 1),
+                        box-shadow 0.22s cubic-bezier(0.2, 0.85, 0.25, 1),
+                        border-color 0.2s ease,
+                        background-color 0.2s ease;
+            outline: none !important;
+            position: relative;
+        }
+
+        .tv-focusable:hover,
+        .tv-focusable.tv-focused {
+            transform: scale(1.045) translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.96) !important;
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.9),
+                        0 0 0 2.5px rgba(255, 255, 255, 0.96),
+                        0 0 30px var(--focus-glow, rgba(255, 255, 255, 0.32));
+            z-index: 25;
+        }
+
+        /* Dedicated Drawer Item Scaling — Prevents Left/Right Clipping in Side Drawers */
+        .tv-drawer-item.tv-focusable:hover,
+        .tv-drawer-item.tv-focusable.tv-focused {
+            transform: scale(1.018);
+            box-shadow: 0 10px 26px -6px rgba(0, 0, 0, 0.85),
+                        0 0 0 2px rgba(255, 255, 255, 0.95),
+                        0 0 20px var(--focus-glow, rgba(99, 102, 241, 0.35));
+            z-index: 25;
+        }
+
+        .nav-pill.tv-focusable:hover,
+        .nav-pill.tv-focusable.tv-focused {
+            transform: scale(1.04);
+        }
+
+        /* =========================================================
+           3. LUXURY GLASSMORPHISM & AMBIENT BACKDROP
+           ========================================================= */
+        .tv-glass {
+            background: rgba(15, 18, 26, 0.72);
+            backdrop-filter: blur(30px) saturate(175%);
+            -webkit-backdrop-filter: blur(30px) saturate(175%);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .tv-glass-drawer {
+            background: rgba(10, 12, 18, 0.92);
+            backdrop-filter: blur(36px) saturate(180%);
+            -webkit-backdrop-filter: blur(36px) saturate(180%);
+            border-left: 1px solid rgba(255, 255, 255, 0.14);
+        }
+
+        .tv-glass-pill {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        #ambient-bg {
+            transition: background 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        /* Subtle Assistant Orb Pulse */
+        @keyframes orbPulse {
+            0%, 100% { box-shadow: 0 0 12px rgba(99, 102, 241, 0.55), inset 0 0 8px rgba(168, 85, 247, 0.5); }
+            50% { box-shadow: 0 0 24px rgba(139, 92, 246, 0.95), inset 0 0 14px rgba(236, 72, 153, 0.75); }
+        }
+        .assistant-orb {
+            animation: orbPulse 3.2s infinite ease-in-out;
+        }
+
+        /* Key Capture Radar Pulse */
+        @keyframes radarRing {
+            0% { transform: scale(0.85); opacity: 0.9; }
+            100% { transform: scale(1.65); opacity: 0; }
+        }
+        .radar-pulse::before {
+            content: '';
+            position: absolute;
+            inset: -8px;
+            border-radius: 9999px;
+            border: 2px solid rgba(129, 140, 248, 0.8);
+            animation: radarRing 1.5s infinite cubic-bezier(0.16, 1, 0.3, 1);
+        }
+    </style>
+</head>
+<body class="relative flex flex-col justify-between select-none">
+
+    <!-- ========================================================= -->
+    <!-- DYNAMIC FULLSCREEN AMBIENT BACKDROP                       -->
+    <!-- ========================================================= -->
+    <div id="ambient-bg" class="fixed inset-0 -z-20 pointer-events-none"
+         style="background: radial-gradient(circle at 75% 24%, rgba(229, 9, 20, 0.40) 0%, rgba(15, 23, 42, 0.74) 48%, #040508 88%);">
+    </div>
+    <div class="fixed inset-0 -z-10 pointer-events-none bg-gradient-to-t from-[#040508] via-transparent to-[#040508]/65"></div>
+
+    <!-- ========================================================= -->
+    <!-- TOP TV NAVIGATION BAR (CLEAN: HOME, APPS, TV & AI ORB)    -->
+    <!-- ========================================================= -->
+    <header class="w-full px-8 sm:px-14 pt-6 pb-2 flex items-center justify-between z-30 shrink-0">
+        <!-- Left: Clean TV Sections -->
+        <nav class="flex items-center gap-3" role="navigation">
+            <button id="tab-home" onclick="switchTab('home')"
+                    class="tv-focusable nav-pill px-6 py-2 rounded-full text-sm font-bold tracking-wide transition-all bg-white text-slate-950 shadow-lg">
+                Αρχική
+            </button>
+            <button id="tab-apps" onclick="switchTab('apps')"
+                    class="tv-focusable nav-pill px-6 py-2 rounded-full text-sm font-medium tracking-wide text-slate-300 hover:text-white tv-glass-pill">
+                Εφαρμογές
+            </button>
+            <button id="tab-tv" onclick="switchTab('tv')"
+                    class="tv-focusable nav-pill px-6 py-2 rounded-full text-sm font-medium tracking-wide text-slate-300 hover:text-white tv-glass-pill flex items-center gap-1.5">
+                <i class="ph-fill ph-television text-sky-400"></i>
+                <span>Τηλεόραση</span>
+            </button>
+        </nav>
+
+        <!-- Right: Small Subtle AI Button + Quick Settings Gear + Weather & Time -->
+        <div class="flex items-center gap-3.5">
+            <!-- Small, subtle Voice/AI Icon Button (Top-Right) -->
+            <button id="btn-top-assistant" onclick="toggleAssistantPopup()"
+                    title="Φωνητικός Βοηθός AI (Κουμπί Μικροφώνου στο Τηλεκοντρόλ)"
+                    style="--focus-glow: rgba(139, 92, 246, 0.85);"
+                    class="tv-focusable assistant-orb w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-600 via-purple-500 to-pink-500 border border-white/30 flex items-center justify-center text-white shadow-lg">
+                <i class="ph-fill ph-microphone text-lg"></i>
+            </button>
+
+            <!-- Subtle Quick Settings Gear (Matches Remote Gear Key) -->
+            <button id="btn-top-settings" onclick="toggleQuickSettingsDrawer()"
+                    title="Ρυθμίσεις Τηλεόρασης (Κουμπί Γρανάζι στο Τηλεκοντρόλ)"
+                    class="tv-focusable w-10 h-10 rounded-full tv-glass-pill flex items-center justify-center text-slate-300 hover:text-white">
+                <i class="ph-bold ph-gear-six text-lg"></i>
+            </button>
+
+            <!-- Weather & Live Clock Pill -->
+            <div class="tv-glass-pill px-4 py-2 rounded-full flex items-center gap-3 text-sm text-slate-200">
+                <span class="flex items-center gap-1.5 text-slate-300">
+                    <i class="ph-fill ph-cloud-moon text-sky-400 text-base"></i>
+                    <span id="tv-weather-temp">21°C</span>
+                </span>
+                <span class="text-white/20">|</span>
+                <span id="tv-clock" class="font-semibold tracking-wider text-white">22:45</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- ========================================================= -->
+    <!-- TOP-RIGHT COMPACT AI ASSISTANT POPOVER (VOICE + GEMINI)   -->
+    <!-- ========================================================= -->
+    <div id="assistant-popup"
+         class="fixed top-20 right-8 sm:right-14 z-50 w-80 sm:w-96 tv-glass rounded-3xl p-4 shadow-[0_25px_70px_rgba(0,0,0,0.95)] border border-white/20 hidden transition-all duration-300">
+        
+        <div class="flex items-center justify-between gap-3 mb-3">
+            <div class="flex items-center gap-2.5">
+                <button id="popup-mic-btn" onclick="startGreekVoiceRecognition()"
+                        title="Πάτησε για ομιλία στα Ελληνικά"
+                        class="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white shadow-md hover:scale-105 transition">
+                    <i id="popup-mic-icon" class="ph-fill ph-microphone text-base"></i>
+                </button>
+                <div>
+                    <div id="assistant-status-title" class="text-xs font-bold text-white">Πες ή γράψε τι θέλεις...</div>
+                    <div id="assistant-status-sub" class="text-[11px] text-slate-400">Αυτόματο άνοιγμα ταινίας, καναλιού ή εφαρμογής</div>
+                </div>
+            </div>
+            <button onclick="closeAssistantPopup()" class="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300">
+                <i class="ph-bold ph-x text-xs"></i>
+            </button>
+        </div>
+
+        <!-- Compact Input Field -->
+        <div class="flex items-center gap-2">
+            <input id="assistant-input" type="text"
+                   placeholder="π.χ. Βάλε μια ταινία δράσης στο Netflix..."
+                   class="flex-1 bg-black/55 border border-white/15 rounded-2xl px-3.5 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-indigo-400"
+                   onkeydown="if(event.key === 'Enter') { event.stopPropagation(); executeAssistantCommand(); }" />
+            <button onclick="executeAssistantCommand()"
+                    class="px-3.5 py-2 rounded-2xl bg-white text-slate-950 font-extrabold text-xs hover:bg-slate-200 transition shrink-0">
+                OK
+            </button>
+        </div>
+
+        <!-- 1-Tap Voice Presets -->
+        <div class="mt-3 flex flex-wrap gap-1.5">
+            <button onclick="triggerQuickCommand('Βάλε μια δυνατή ταινία δράσης στο Netflix')"
+                    class="text-[11px] px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 transition">
+                🎬 Ταινία Δράσης
+            </button>
+            <button onclick="triggerQuickCommand('Βάλε μια ταινία Sci-Fi στο Netflix')"
+                    class="text-[11px] px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 transition">
+                🚀 Sci-Fi / Μυστήριο
+            </button>
+            <button onclick="triggerQuickCommand('Βάλε MEGA στην τηλεόραση')"
+                    class="text-[11px] px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 transition">
+                📺 Ζωντανή TV (MEGA)
+            </button>
+            <button onclick="triggerQuickCommand('Άνοιξε το SmartTube')"
+                    class="text-[11px] px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 transition">
+                ▶️ SmartTube
+            </button>
+        </div>
+
+        <!-- Live Execution Status Feedback -->
+        <div id="assistant-feedback" class="hidden mt-3 pt-2.5 border-t border-white/10 flex items-center gap-2 text-xs text-emerald-300 font-medium">
+            <i class="ph-bold ph-spinner animate-spin text-sm shrink-0"></i>
+            <span id="assistant-feedback-text" class="truncate">Επιλογή ταινίας και εκκίνηση Netflix...</span>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- MAIN FULLSCREEN TV VIEWPORT (NO SCROLLBARS)               -->
+    <!-- ========================================================= -->
+    <main id="tv-main-viewport" class="flex-1 w-full px-8 sm:px-14 pb-6 flex flex-col justify-between overflow-y-auto z-10">
+
+        <!-- ===================================================== -->
+        <!-- VIEW 1: HOME SCREEN ("Αρχική")                        -->
+        <!-- ===================================================== -->
+        <div id="view-home" class="flex-1 flex flex-col justify-between gap-4 py-1">
+
+            <!-- HERO SPOTLIGHT BANNER -->
+            <section id="hero-banner"
+                     class="relative w-full rounded-[30px] p-7 sm:p-9 overflow-hidden flex flex-col justify-end min-h-[225px] sm:min-h-[265px] border border-white/15 shadow-2xl transition-all duration-700"
+                     style="background: linear-gradient(95deg, rgba(5, 7, 14, 0.95) 0%, rgba(12, 16, 28, 0.74) 54%, rgba(229, 9, 20, 0.28) 100%);">
+
+                <!-- Subtle Ambient Artwork Glow Right Side -->
+                <div class="absolute right-0 top-0 bottom-0 w-1/2 pointer-events-none opacity-50 flex items-center justify-end pr-12">
+                    <div id="hero-glow-orb" class="w-72 h-72 rounded-full bg-gradient-to-tr from-red-600/50 via-amber-500/30 to-transparent blur-2xl transition-all duration-700"></div>
+                </div>
+
+                <div class="relative z-10 max-w-2xl space-y-2.5">
+                    <!-- Service & Format Badges -->
+                    <div class="flex items-center gap-2.5 flex-wrap">
+                        <span id="hero-service-pill" class="px-3 py-0.5 rounded-md bg-[#E50914] text-white font-extrabold text-[11px] tracking-widest uppercase shadow">
+                            NETFLIX
+                        </span>
+                        <span id="hero-category-pill" class="text-xs font-medium text-slate-300 tracking-wide">
+                            Δράση • Περιπέτεια • 4K Dolby Vision
+                        </span>
+                        <span class="px-2 py-0.5 rounded bg-white/10 text-slate-200 text-[10px] font-semibold border border-white/10">
+                            Dolby Atmos
+                        </span>
+                    </div>
+
+                    <!-- Movie Title -->
+                    <h1 id="hero-title" class="text-3xl sm:text-5xl font-black tracking-tight text-white leading-none">
+                        Extraction 2
+                    </h1>
+
+                    <!-- Synopsis -->
+                    <p id="hero-desc" class="text-xs sm:text-sm text-slate-300 leading-relaxed line-clamp-2 max-w-xl">
+                        Επιστρέφοντας από το χείλος του θανάτου, ο κομάντο Τάιλερ Ρέικ αναλαμβάνει μια παράτολμη αποστολή διάσωσης μιας οικογένειας από μια αδίστακτη συμμορία.
+                    </p>
+
+                    <!-- Action Buttons -->
+                    <div class="pt-2 flex items-center gap-3">
+                        <button id="btn-hero-play" onclick="playCurrentHeroMovie()"
+                                style="--focus-glow: rgba(229, 9, 20, 0.75);"
+                                class="tv-focusable px-6 py-2.5 rounded-2xl bg-white text-slate-950 font-extrabold text-xs sm:text-sm flex items-center gap-2 shadow-xl">
+                            <i class="ph-fill ph-play text-base"></i>
+                            <span>Αναπαραγωγή Τώρα</span>
+                        </button>
+                        <button id="btn-hero-next" onclick="cycleHeroSpotlight()"
+                                class="tv-focusable tv-glass-pill px-5 py-2.5 rounded-2xl text-white font-semibold text-xs sm:text-sm flex items-center gap-2 hover:bg-white/15">
+                            <i class="ph-bold ph-arrows-clockwise text-base"></i>
+                            <span>Επόμενη Πρόταση</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ROW 1: ΟΙ ΕΦΑΡΜΟΓΕΣ ΜΟΥ (AUTO-POPULATED INSTALLED TV APPS) -->
+            <section class="space-y-2 px-1 py-1">
+                <div class="flex items-center justify-between px-1">
+                    <h2 class="text-sm sm:text-base font-semibold text-slate-200 tracking-wide">
+                        Οι Εφαρμογές Μου
+                    </h2>
+                    <span class="text-[11px] text-slate-400 hidden sm:inline">
+                        Κρατημένο OK (ή Δεξί Κλικ) σε εφαρμογή για επιλογές
+                    </span>
+                </div>
+
+                <div id="home-apps-row" class="grid grid-cols-5 sm:grid-cols-10 gap-3.5 p-1">
+                    <!-- Populated dynamically by JS -->
+                </div>
+            </section>
+
+            <!-- ROW 2: ΣΥΝΕΧΕΙΑ ΠΑΡΑΚΟΛΟΥΘΗΣΗΣ & ΠΡΟΤΑΣΕΙΣ (16:9 CARDS) -->
+            <section class="space-y-2 px-1 py-1">
+                <div class="flex items-center justify-between px-1">
+                    <h2 class="text-sm sm:text-base font-semibold text-slate-200 tracking-wide">
+                        Συνέχεια Παρακολούθησης & Προτάσεις
+                    </h2>
+                </div>
+
+                <div id="home-movies-row" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 p-1">
+                    <!-- Populated dynamically by JS -->
+                </div>
+            </section>
+
+        </div>
+
+        <!-- ===================================================== -->
+        <!-- VIEW 2: ALL INSTALLED APPS ("Εφαρμογές")              -->
+        <!-- ===================================================== -->
+        <div id="view-apps" class="hidden flex-1 py-3 space-y-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold text-white">Οι Εφαρμογές της Τηλεόρασης</h2>
+                    <p id="apps-source-subtitle" class="text-xs sm:text-sm text-slate-400">
+                        Αυτόματη εμφάνιση των εφαρμογών σου στην Xiaomi TV Max 85" • Κρατημένο OK για μετακίνηση ή εκκαθάριση
+                    </p>
+                </div>
+            </div>
+
+            <div id="all-apps-grid" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4 p-2">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- ===================================================== -->
+        <!-- VIEW 3: LIVE TV CHANNELS ("Τηλεόραση")                -->
+        <!-- ===================================================== -->
+        <div id="view-tv" class="hidden flex-1 py-3 space-y-5">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                    <h2 class="text-2xl font-bold text-white flex items-center gap-2.5">
+                        <i class="ph-fill ph-television text-sky-400"></i>
+                        <span>Ζωντανή Τηλεόραση (Κανάλια Κεραίας / Digea)</span>
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-400">
+                        Πάτησε σε οποιοδήποτε κανάλι για άμεση προβολή και άλλαξε κανάλια με το Πάνω / Κάτω στο τηλεκοντρόλ
+                    </p>
+                </div>
+                <button onclick="openLiveTvDirect()"
+                        class="tv-focusable px-5 py-2.5 rounded-2xl bg-sky-500 text-slate-950 font-extrabold text-xs flex items-center gap-2 shadow-lg">
+                    <i class="ph-fill ph-play"></i>
+                    <span>Άνοιγμα Κανονικής Τηλεόρασης (Πλήρης Οθόνη)</span>
+                </button>
+            </div>
+
+            <div id="live-tv-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-2">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ========================================================= -->
+    <!-- RIGHT-SIDE DRAWER 1: HDMI & TV INPUTS (NO CLIPPING)       -->
+    <!-- ========================================================= -->
+    <div id="inputs-drawer" class="fixed inset-y-0 right-0 z-50 w-80 sm:w-[410px] tv-glass-drawer px-6 py-6 hidden flex-col justify-between shadow-[-25px_0_60px_rgba(0,0,0,0.9)]">
+        <div class="space-y-4 overflow-y-auto px-2 py-1">
+            <div class="flex items-center justify-between border-b border-white/10 pb-4">
+                <div class="flex items-center gap-2.5">
+                    <i class="ph-fill ph-plugs-connected text-xl text-sky-400"></i>
+                    <div>
+                        <h3 class="text-base font-bold text-white">Είσοδοι Εικόνας & Κεραία</h3>
+                        <p class="text-[11px] text-slate-400">Xiaomi TV Max 85" • Αυτόματη εύρεση συσκευών</p>
+                    </div>
+                </div>
+                <button onclick="closeAllDrawers()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300">
+                    <i class="ph-bold ph-x text-xs"></i>
+                </button>
+            </div>
+
+            <div id="inputs-drawer-list" class="space-y-2.5 py-1">
+                <!-- Populated dynamically from tvInputs -->
+            </div>
+        </div>
+
+        <div class="pt-4 border-t border-white/10 text-[11px] text-slate-400 flex items-center justify-between px-2">
+            <span>Επιλογή Εισόδου</span>
+            <span class="text-emerald-400 font-semibold">HDMI 2.1 • 4K 144Hz</span>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- RIGHT-SIDE DRAWER 2: QUICK SETTINGS (FIXED NO CLIPPING)   -->
+    <!-- ========================================================= -->
+    <div id="settings-drawer" class="fixed inset-y-0 right-0 z-50 w-80 sm:w-[420px] tv-glass-drawer px-6 py-6 hidden flex-col justify-between shadow-[-25px_0_60px_rgba(0,0,0,0.9)]">
+        <div class="space-y-3 overflow-y-auto px-2 py-1">
+            <div class="flex items-center justify-between border-b border-white/10 pb-4">
+                <div class="flex items-center gap-2.5">
+                    <i class="ph-fill ph-sliders-horizontal text-xl text-indigo-400"></i>
+                    <div>
+                        <h3 class="text-base font-bold text-white">Ρυθμίσεις Τηλεόρασης</h3>
+                        <p class="text-[11px] text-slate-400">Xiaomi TV Max 85" (2025)</p>
+                    </div>
+                </div>
+                <button onclick="closeAllDrawers()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300">
+                    <i class="ph-bold ph-x text-xs"></i>
+                </button>
+            </div>
+
+            <!-- 1. Κουμπιά Τηλεκοντρόλ (Interactive Key Learning!) -->
+            <button onclick="openRemoteMapperModal()"
+                    style="--focus-glow: rgba(99, 102, 241, 0.6);"
+                    class="tv-focusable tv-drawer-item w-full p-3.5 rounded-2xl bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-400/35 flex items-center justify-between text-left">
+                <div class="flex items-center gap-3">
+                    <i class="ph-fill ph-remote text-xl text-indigo-300 shrink-0"></i>
+                    <div>
+                        <div class="text-xs font-bold text-white">Κουμπιά Τηλεκοντρόλ</div>
+                        <div class="text-[11px] text-indigo-200 font-medium">Πάτησε ένα κουμπί & διάλεξε τι θα ανοίγει</div>
+                    </div>
+                </div>
+                <i class="ph-bold ph-caret-right text-xs text-white shrink-0"></i>
+            </button>
+
+            <!-- 2. Εικόνα (Live Visual Filter!) -->
+            <button onclick="cyclePictureMode()"
+                    class="tv-focusable tv-drawer-item w-full p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-between text-left">
+                <div class="flex items-center gap-3">
+                    <i class="ph-fill ph-monitor-play text-xl text-amber-400 shrink-0"></i>
+                    <div>
+                        <div class="text-xs font-bold text-white">Εικόνα</div>
+                        <div id="setting-pic-val" class="text-[11px] text-amber-300 font-medium">Σινεμά (Dolby Vision)</div>
+                    </div>
+                </div>
+                <i class="ph-bold ph-arrows-left-right text-xs text-slate-400 shrink-0"></i>
+            </button>
+
+            <!-- 3. Φωτεινότητα Οθόνης (Live Visual Brightness!) -->
+            <button onclick="cycleScreenBrightness()"
+                    class="tv-focusable tv-drawer-item w-full p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-between text-left">
+                <div class="flex items-center gap-3">
+                    <i class="ph-fill ph-sun-dim text-xl text-yellow-300 shrink-0"></i>
+                    <div>
+                        <div class="text-xs font-bold text-white">Φωτεινότητα Οθόνης</div>
+                        <div id="setting-bright-val" class="text-[11px] text-yellow-200 font-medium">100% (Κανονική)</div>
+                    </div>
+                </div>
+                <i class="ph-bold ph-arrows-left-right text-xs text-slate-400 shrink-0"></i>
+            </button>
+
+            <!-- 4. Ήχος -->
+            <button onclick="cycleAudioOutput()"
+                    class="tv-focusable tv-drawer-item w-full p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-between text-left">
+                <div class="flex items-center gap-3">
+                    <i class="ph-fill ph-speaker-hifi text-xl text-sky-400 shrink-0"></i>
+                    <div>
+                        <div class="text-xs font-bold text-white">Ήχος</div>
+                        <div id="setting-audio-val" class="text-[11px] text-sky-300 font-medium">Ηχόμπαρα HDMI (Dolby Atmos)</div>
+                    </div>
+                </div>
+                <i class="ph-bold ph-arrows-left-right text-xs text-slate-400 shrink-0"></i>
+            </button>
+
+            <!-- 5. Καθαρισμός Μνήμης (RAM Boost) -->
+            <button onclick="boostTvRam()"
+                    class="tv-focusable tv-drawer-item w-full p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-between text-left">
+                <div class="flex items-center gap-3">
+                    <i class="ph-fill ph-lightning text-xl text-emerald-400 shrink-0"></i>
+                    <div>
+                        <div class="text-xs font-bold text-white">Καθαρισμός Μνήμης</div>
+                        <div id="setting-ram-val" class="text-[11px] text-slate-400">Κλείσιμο ανοιχτών εφαρμογών</div>
+                    </div>
+                </div>
+                <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold shrink-0">Καθαρισμός</span>
+            </button>
+
+            <!-- 6. Ήχοι Κουμπιών Μενού -->
+            <button onclick="toggleUiSounds()"
+                    class="tv-focusable tv-drawer-item w-full p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-between text-left">
+                <div class="flex items-center gap-3">
+                    <i class="ph-fill ph-speaker-simple-high text-xl text-purple-400 shrink-0"></i>
+                    <div>
+                        <div class="text-xs font-bold text-white">Ήχοι Κουμπιών</div>
+                        <div id="setting-sound-val" class="text-[11px] text-emerald-300 font-medium">Ενεργοί</div>
+                    </div>
+                </div>
+            </button>
+
+            <!-- 7. Εφαρμογές στην Αρχική Οθόνη -->
+            <div class="pt-2 border-t border-white/10 space-y-2">
+                <div class="text-xs font-bold text-slate-300">Εφαρμογές στην Αρχική Οθόνη</div>
+                <div id="drawer-apps-toggles" class="grid grid-cols-2 gap-2">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- 8. Οδηγός Εγκατάστασης (Κρύβεται αυτόματα όταν μπει στην πραγματική Xiaomi TV!) -->
+            <div id="pc-setup-guide-container" class="pt-2 border-t border-white/10">
+                <button onclick="openSetupModal()"
+                        class="tv-focusable tv-drawer-item w-full p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/15 flex items-center justify-between text-left">
+                    <div class="flex items-center gap-3">
+                        <i class="ph-fill ph-terminal-window text-xl text-slate-300 shrink-0"></i>
+                        <div>
+                            <div class="text-xs font-bold text-white">Πώς μπαίνει στην Τηλεόραση (PC)</div>
+                            <div class="text-[10px] text-slate-400">Κρύβεται αυτόματα μόλις μπει στην TV</div>
+                        </div>
+                    </div>
+                    <i class="ph-bold ph-caret-right text-xs text-slate-400 shrink-0"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="pt-3 border-t border-white/10 text-[11px] text-slate-400 flex items-center justify-between px-2">
+            <span>Xiaomi TV Max 85"</span>
+            <span id="bridge-status-badge" class="text-emerald-400 font-semibold">Έτοιμο</span>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- REMOTE KEY LEARNING MODAL ("ΕΚΜΑΘΗΣΗ ΚΟΥΜΠΙΟΥ")            -->
+    <!-- ========================================================= -->
+    <div id="remote-mapper-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden items-center justify-center p-4">
+        <div class="w-full max-w-xl tv-glass rounded-3xl p-6 sm:p-7 border border-white/20 shadow-2xl space-y-5 max-h-[88vh] flex flex-col justify-between">
+            <!-- Header -->
+            <div class="flex items-center justify-between border-b border-white/10 pb-3.5">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300">
+                        <i class="ph-fill ph-remote text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-extrabold text-white">Κουμπιά Τηλεκοντρόλ</h3>
+                        <p class="text-xs text-slate-300">Πάτησε οποιοδήποτε κουμπί στο τηλεκοντρόλ σου και διάλεξε τι θα ανοίγει</p>
+                    </div>
+                </div>
+                <button onclick="closeRemoteMapperModal()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white">
+                    <i class="ph-bold ph-x text-xs"></i>
+                </button>
+            </div>
+
+            <!-- STEP 0: DEFAULT LIST + "RECORD NEW BUTTON" -->
+            <div id="key-learn-step-list" class="space-y-4 overflow-y-auto px-1 py-1">
+                <!-- Primary Interactive Capture Button -->
+                <button id="btn-start-key-capture" onclick="startKeyCaptureMode()"
+                        style="--focus-glow: rgba(99, 102, 241, 0.8);"
+                        class="tv-focusable tv-drawer-item w-full p-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white font-extrabold text-sm flex items-center justify-between shadow-xl border border-white/30">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+                            <i class="ph-bold ph-plus text-lg"></i>
+                        </div>
+                        <div class="text-left">
+                            <div class="text-sm font-extrabold">Ορισμός Κουμπιού (Πάτα OK)</div>
+                            <div class="text-[11px] text-white/80 font-medium">Θα πατήσεις το κουμπί που θέλεις στο τηλεκοντρόλ και μετά θα διαλέξεις τι ανοίγει</div>
+                        </div>
+                    </div>
+                    <span class="px-3 py-1 rounded-xl bg-black/30 text-xs font-bold shrink-0">OK</span>
+                </button>
+
+                <!-- Currently Programmed Buttons List -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between text-xs font-bold text-slate-300 px-1">
+                        <span>Προγραμματισμένα Κουμπιά Τηλεκοντρόλ:</span>
+                        <button onclick="resetAllRemoteBindings()" class="text-[11px] text-slate-400 hover:text-rose-300 underline">
+                            Επαναφορά αρχικών
+                        </button>
+                    </div>
+                    <div id="programmed-keys-list" class="space-y-2">
+                        <!-- Populated dynamically by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 1: LISTENING / WAITING FOR USER TO PRESS ANY REMOTE KEY -->
+            <div id="key-learn-step-listen" class="hidden py-8 flex-col items-center justify-center text-center space-y-5">
+                <div class="relative w-20 h-20 rounded-full bg-indigo-500/25 border-2 border-indigo-400 flex items-center justify-center text-indigo-300 radar-pulse">
+                    <i class="ph-fill ph-broadcast text-4xl animate-pulse"></i>
+                </div>
+                <div class="space-y-1.5 max-w-md">
+                    <h4 class="text-xl font-black text-white">Πάτησε τώρα το κουμπί στο τηλεκοντρόλ...</h4>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Πάτησε **οποιοδήποτε κουμπί** στο τηλεκοντρόλ σου (ή στο πληκτρολόγιο, ή πάτησε πάνω σε ένα κουμπί του εικονικού τηλεκοντρόλ κάτω δεξιά) για να το αναγνωρίσει η τηλεόραση.
+                    </p>
+                </div>
+                <button onclick="cancelKeyCaptureMode()"
+                        class="px-5 py-2 rounded-full bg-white/10 hover:bg-white/20 text-xs font-bold text-slate-300">
+                    Ακύρωση
+                </button>
+            </div>
+
+            <!-- STEP 2: PICK ACTION FOR THE CAPTURED KEY -->
+            <div id="key-learn-step-action" class="hidden space-y-3 overflow-y-auto px-1 py-1">
+                <div class="p-3.5 rounded-2xl bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <i class="ph-fill ph-check-circle text-emerald-400 text-xl"></i>
+                        <div>
+                            <div class="text-[11px] text-emerald-200">Αναγνωρίστηκε το κουμπί:</div>
+                            <div id="captured-key-badge" class="text-sm font-black text-white">Κουμπί TV</div>
+                        </div>
+                    </div>
+                    <button onclick="startKeyCaptureMode()" class="text-xs text-indigo-300 hover:underline font-semibold">
+                        Άλλο κουμπί
+                    </button>
+                </div>
+
+                <div class="text-xs font-bold text-slate-200 px-1">
+                    Διάλεξε τι θέλεις να ανοίγει αυτόματα όταν το πατάς:
+                </div>
+
+                <div id="key-learn-actions-grid" class="grid grid-cols-2 gap-2.5 max-h-64 overflow-y-auto p-1">
+                    <!-- Populated dynamically by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- LONG-PRESS APP CONTEXT MENU MODAL                         -->
+    <!-- ========================================================= -->
+    <div id="app-context-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-md hidden items-center justify-center p-4">
+        <div class="w-full max-w-sm tv-glass rounded-3xl p-6 border border-white/20 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                <div>
+                    <div class="text-[11px] text-slate-400 uppercase tracking-wider">Επιλογές Εφαρμογής</div>
+                    <h3 id="ctx-app-title" class="text-lg font-extrabold text-white">Netflix</h3>
+                    <div id="ctx-app-pkg" class="text-[11px] font-mono text-slate-400">com.netflix.ninja</div>
+                </div>
+                <button onclick="closeAppContextMenu()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white">
+                    <i class="ph-bold ph-x text-xs"></i>
+                </button>
+            </div>
+
+            <div class="space-y-2">
+                <button onclick="ctxLaunchSelectedApp()"
+                        class="w-full p-3 rounded-2xl bg-white text-slate-950 font-bold text-xs flex items-center gap-2.5 justify-center">
+                    <i class="ph-fill ph-play"></i>
+                    <span>Άνοιγμα Εφαρμογής</span>
+                </button>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="ctxMoveApp(-1)"
+                            class="p-2.5 rounded-2xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-white flex items-center justify-center gap-1.5">
+                        <i class="ph-bold ph-arrow-left"></i>
+                        <span>Αριστερά</span>
+                    </button>
+                    <button onclick="ctxMoveApp(1)"
+                            class="p-2.5 rounded-2xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-white flex items-center justify-center gap-1.5">
+                        <span>Δεξιά</span>
+                        <i class="ph-bold ph-arrow-right"></i>
+                    </button>
+                </div>
+                <button onclick="ctxClearAppCache()"
+                        class="w-full p-2.5 rounded-2xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-amber-300 flex items-center justify-center gap-2">
+                    <i class="ph-bold ph-broom"></i>
+                    <span>Διακοπή & Εκκαθάριση Εφαρμογής</span>
+                </button>
+                <button onclick="ctxToggleHideApp()"
+                        class="w-full p-2.5 rounded-2xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-rose-300 flex items-center justify-center gap-2">
+                    <i class="ph-bold ph-eye-slash"></i>
+                    <span>Εμφάνιση / Απόκρυψη από Αρχική</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- COMPLETE INSTALLATION & PYTHON AI SERVER MODAL            -->
+    <!-- ========================================================= -->
+    <div id="setup-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-lg hidden items-center justify-center p-4 sm:p-8">
+        <div class="w-full max-w-4xl max-h-[88vh] tv-glass rounded-3xl p-6 sm:p-8 border border-white/20 shadow-2xl flex flex-col justify-between gap-4 overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-white/10 pb-4">
+                <div>
+                    <h2 class="text-xl font-extrabold text-white">Πώς περνάς το Custom UI & το AI στην Xiaomi TV Max 85" (2025)</h2>
+                    <p class="text-xs text-slate-300 mt-0.5">
+                        Αυτόματος συγχρονισμός των δικών σου εφαρμογών, των καναλιών TV, των θυρών HDMI και σύνδεση με το AI.
+                    </p>
+                </div>
+                <button onclick="closeSetupModal()" class="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white">
+                    <i class="ph-bold ph-x"></i>
+                </button>
+            </div>
+
+            <!-- Live Connection Config (Gemini API Key & Local TV IP) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white/5 p-4 rounded-2xl border border-white/10">
+                <div>
+                    <label class="text-[11px] font-bold text-slate-300 block mb-1">Gemini API Key (Προαιρετικό):</label>
+                    <input id="cfg-gemini-key" type="password" placeholder="AIzaSy... (Αυτόματο στο Preview)"
+                           class="w-full bg-black/60 border border-white/15 rounded-xl px-3 py-2 text-xs text-white" />
+                </div>
+                <div>
+                    <label class="text-[11px] font-bold text-slate-300 block mb-1">Διεύθυνση Python TV Server (LAN):</label>
+                    <div class="flex gap-2">
+                        <input id="cfg-bridge-url" type="text" value="http://localhost:8765"
+                               class="flex-1 bg-black/60 border border-white/15 rounded-xl px-3 py-2 text-xs text-white font-mono" />
+                        <button onclick="saveBridgeSettings()" class="px-3.5 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs">
+                            Σύνδεση
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step-by-Step Instructions & Ready Python Script -->
+            <div class="space-y-3 text-xs text-slate-200 leading-relaxed">
+                <div class="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-400/30">
+                    <strong class="text-indigo-300">Αυτόματη Λειτουργία στην Τηλεόραση:</strong>
+                    Όταν συνδεθεί με την Xiaomi TV Max 85", αυτό το παράθυρο οδηγού **εξαφανίζεται αυτόματα**, φορτώνονται οι **δικές σου εφαρμογές**, και όταν πατάς **Netflix** ή **TV**, ανοίγει κανονικά η αυθεντική εφαρμογή του Netflix και η κανονική τηλεόραση (Digea)!
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <span class="font-bold text-white">Κώδικας Σύνδεσης (`xiaomi_tv_bridge.py`) + Επαναφορά Εργοστασιακού Μενού:</span>
+                    <button onclick="copyPythonBridgeCode()" id="btn-copy-code"
+                            class="px-3 py-1.5 rounded-xl bg-white text-slate-950 font-bold text-xs flex items-center gap-1.5">
+                        <i class="ph-bold ph-copy"></i>
+                        <span>Αντιγραφή Κώδικα Python</span>
+                    </button>
+                </div>
+
+                <pre id="python-bridge-code" class="bg-black/80 border border-white/15 rounded-2xl p-4 font-mono text-[11px] text-emerald-300 overflow-x-auto select-all leading-relaxed"># 1. Στην Xiaomi TV Max 85": Ρυθμίσεις -> Σύστημα -> Πληροφορίες -> Πάτα 7 φορές στο "Build" -> Ενεργοποίησε το "Wireless Debugging"
+# 2. Στο PC σου: pip install flask flask-cors
+# 3. Τρέξε: python xiaomi_tv_bridge.py
+# (ΑΝ ΘΕΛΕΙΣ ΝΑ ΓΥΡΙΣΕΙΣ ΣΤΟ ΕΡΓΟΣΤΑΣΙΑΚΟ ΜΕΝΟΥ ΤΗΣ XIAOMI: adb shell pm enable --user 0 com.google.android.apps.tv.launcherx)
+
+import subprocess
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+
+TV_IP = "192.168.1.50:5555"  # Βάλε την IP της Xiaomi TV Max 85"
+app = Flask(__name__)
+CORS(app)
+
+def adb(cmd):
+    return subprocess.getoutput(f"adb -s {TV_IP} {cmd}")
+
+@app.route("/status", methods=["GET"])
+def status():
+    out = adb("shell getprop ro.product.model")
+    return jsonify({"connected": True, "model": out.strip() or "Xiaomi TV Max 85 (2025)"})
+
+@app.route("/apps", methods=["GET"])
+def get_installed_apps():
+    raw = adb("shell pm list packages -3")
+    pkgs = [line.replace("package:", "").strip() for line in raw.splitlines() if line.startswith("package:")]
+    return jsonify({"packages": pkgs})
+
+@app.route("/launch_app", methods=["POST"])
+def launch_app():
+    pkg = request.json.get("package")
+    adb(f"shell monkey -p {pkg} -c android.intent.category.LEANBACK_LAUNCHER 1")
+    return jsonify({"ok": True, "launched": pkg})
+
+@app.route("/live_tv", methods=["POST"])
+def open_live_tv():
+    # Ανοίγει κατευθείαν την κανονική τηλεόραση (Κεραία / Digea) της Xiaomi TV!
+    adb("shell input keyevent 170") # KEYCODE_TV
+    return jsonify({"ok": True})
+
+@app.route("/netflix_watch", methods=["POST"])
+def netflix_watch():
+    watch_id = request.json.get("watchId", "81098494")
+    adb(f'shell am start -n com.netflix.ninja/.MainActivity -a android.intent.action.VIEW -d "http://www.netflix.com/watch/{watch_id}"')
+    return jsonify({"ok": True, "watchId": watch_id})
+
+if __name__ == "__main__":
+    subprocess.getoutput(f"adb connect {TV_IP}")
+    app.run(host="0.0.0.0", port=8765)</pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- 4K AMBIENT SCREENSAVER OVERLAY (REMOTE POWER KEY)         -->
+    <!-- ========================================================= -->
+    <div id="screensaver-overlay" onclick="toggleScreensaverMode()"
+         class="fixed inset-0 z-50 bg-black hidden flex-col justify-between p-14 cursor-pointer">
+        <div class="absolute inset-0 -z-10"
+             style="background: radial-gradient(circle at 30% 30%, rgba(99, 102, 241, 0.32), rgba(14, 165, 233, 0.18) 45%, #020305 85%);"></div>
+        <div class="flex items-center justify-between text-slate-400 text-sm">
+            <span>Xiaomi TV Max 85" • Προφύλαξη Οθόνης</span>
+            <span>Πάτησε οποιοδήποτε κουμπί στο τηλεκοντρόλ για συνέχεια</span>
+        </div>
+        <div class="my-auto space-y-2">
+            <div id="screensaver-clock" class="text-7xl sm:text-9xl font-black tracking-tight text-white/90">22:45</div>
+            <div class="text-xl text-slate-300 font-medium flex items-center gap-3">
+                <i class="ph-fill ph-cloud-moon text-sky-400 text-2xl"></i>
+                <span>Αθήνα • 21°C • Καθαρός Ουρανός</span>
+            </div>
+        </div>
+        <div class="text-xs text-slate-500">Dolby Vision • 4K 144Hz Προστασία Πάνελ Ενεργή</div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- FULLSCREEN PLAYBACK / LIVE TV TUNER OVERLAY (PREVIEW)     -->
+    <!-- ========================================================= -->
+    <div id="player-overlay" class="fixed inset-0 z-50 bg-black hidden flex-col justify-between p-8 sm:p-14">
+        <div id="player-visual-bg" class="absolute inset-0 -z-10 opacity-65 transition-all duration-1000"
+             style="background: radial-gradient(circle at 50% 45%, rgba(229, 9, 20, 0.45), #030407 80%);">
+        </div>
+
+        <div class="flex items-center justify-between z-10">
+            <div class="flex items-center gap-4">
+                <button onclick="closePlayerOverlay()"
+                        class="px-4 py-2.5 rounded-full tv-glass text-white text-xs sm:text-sm font-semibold flex items-center gap-2 hover:bg-white/20 transition">
+                    <i class="ph-bold ph-arrow-left"></i>
+                    <span>Επιστροφή στο Μενού</span>
+                </button>
+                <div>
+                    <div id="player-service-tag" class="text-[11px] font-extrabold uppercase tracking-widest text-red-500">NETFLIX</div>
+                    <h2 id="player-title" class="text-xl sm:text-3xl font-extrabold text-white">Extraction 2</h2>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2.5 text-xs font-semibold text-slate-300 tv-glass px-4 py-2 rounded-full">
+                <span id="player-badge-pic">Σινεμά</span>
+                <span>•</span>
+                <span id="player-badge-aud">Dolby Atmos</span>
+            </div>
+        </div>
+
+        <div class="flex flex-col items-center justify-center my-auto z-10 text-center space-y-4">
+            <button id="player-center-btn" onclick="togglePlayPause()"
+                    class="w-20 h-20 rounded-full bg-white/15 backdrop-blur-xl border border-white/30 flex items-center justify-center text-white hover:scale-110 transition shadow-2xl">
+                <i id="player-state-icon" class="ph-fill ph-pause text-4xl"></i>
+            </button>
+            <div id="player-status-label" class="text-sm font-medium text-slate-200 tracking-wide">
+                Στην τηλεόραση ανοίγει απευθείας η κανονική εφαρμογή!
+            </div>
+            <div id="live-tv-channel-controls" class="hidden items-center gap-3 pt-2">
+                <button onclick="changeLiveTvChannel(-1)" class="px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-xs font-bold text-white flex items-center gap-1.5">
+                    <i class="ph-bold ph-caret-down"></i> Προηγούμενο Κανάλι (CH-)
+                </button>
+                <button onclick="changeLiveTvChannel(1)" class="px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-xs font-bold text-white flex items-center gap-1.5">
+                    Επόμενο Κανάλι (CH+) <i class="ph-bold ph-caret-up"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="space-y-3 z-10">
+            <div class="w-full h-1.5 bg-white/20 rounded-full overflow-hidden cursor-pointer" onclick="scrubVideo(event)">
+                <div id="player-progress-bar" class="h-full bg-[#E50914] w-1/3 transition-all duration-300"></div>
+            </div>
+            <div class="flex items-center justify-between text-xs text-slate-300 font-medium">
+                <span id="player-time-current">Ζωντανή Μετάδοση / Προβολή</span>
+                <div class="flex items-center gap-4">
+                    <span class="flex items-center gap-1.5"><i class="ph-bold ph-subtitles"></i> Ελληνικά</span>
+                    <span class="flex items-center gap-1.5"><i class="ph-bold ph-speaker-high"></i> Ηχόμπαρα eARC</span>
+                </div>
+                <span>4K UHD</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- ON-SCREEN VOLUME OSD & TOAST NOTIFICATION                 -->
+    <!-- ========================================================= -->
+    <div id="volume-osd" class="fixed top-1/2 left-10 -translate-y-1/2 z-50 tv-glass rounded-3xl px-4 py-6 flex flex-col items-center gap-3 opacity-0 pointer-events-none transition-opacity duration-300">
+        <i id="volume-osd-icon" class="ph-fill ph-speaker-high text-xl text-white"></i>
+        <div class="w-2 h-36 bg-white/15 rounded-full overflow-hidden flex flex-col justify-end">
+            <div id="volume-osd-bar" class="w-full bg-white rounded-full transition-all duration-150" style="height: 35%;"></div>
+        </div>
+        <span id="volume-osd-val" class="text-xs font-bold text-white">35</span>
+    </div>
+
+    <div id="tv-toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 tv-glass px-5 py-2.5 rounded-full text-xs font-semibold text-white shadow-2xl border border-white/20 opacity-0 pointer-events-none transition-all duration-300 flex items-center gap-2">
+        <i class="ph-fill ph-check-circle text-emerald-400 text-base"></i>
+        <span id="tv-toast-text">Ενέργεια ολοκληρώθηκε</span>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- AUTHENTIC XIAOMI TV MAX 85" (2025) 360° BLUETOOTH REMOTE  -->
+    <!-- ========================================================= -->
+    <button id="remote-restore-btn" onclick="toggleRemoteVisibility()"
+            class="fixed bottom-5 right-5 z-40 hidden tv-glass-pill px-4 py-2.5 rounded-full text-xs font-semibold text-white items-center gap-2 shadow-2xl hover:bg-white/20">
+        <i class="ph-fill ph-remote text-indigo-400 text-base"></i>
+        <span>Τηλεκοντρόλ Xiaomi</span>
+    </button>
+
+    <aside id="xiaomi-remote"
+           class="fixed bottom-4 right-5 z-40 w-52 rounded-[38px] bg-gradient-to-b from-[#1a1d26] to-[#0c0e14] p-4 shadow-[0_25px_65px_rgba(0,0,0,0.95)] border border-white/15 flex flex-col items-center gap-2.5 transition-all duration-300">
+        
+        <!-- Row 1: Power Button (Left) | Brand | Fullscreen & Hide -->
+        <div class="w-full flex items-center justify-between px-1">
+            <button onclick="toggleScreensaverMode()" title="Κλείσιμο / Αναμονή Οθόνης"
+                    class="w-8 h-8 rounded-full bg-rose-500/20 hover:bg-rose-500/40 border border-rose-500/40 text-rose-400 flex items-center justify-center text-xs active:scale-90 transition">
+                <i class="ph-bold ph-power"></i>
+            </button>
+            <span class="text-[9px] font-extrabold tracking-widest uppercase text-slate-400">XIAOMI TV MAX</span>
+            <div class="flex items-center gap-1">
+                <button onclick="toggleFullScreenMode()" title="Πλήρης Οθόνη"
+                        class="w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 flex items-center justify-center text-[10px]">
+                    <i class="ph-bold ph-corners-out"></i>
+                </button>
+                <button onclick="toggleRemoteVisibility()" title="Απόκρυψη Τηλεκοντρόλ"
+                        class="w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 flex items-center justify-center text-[10px]">
+                    <i class="ph-bold ph-minus"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Row 2: Live TV Button + Voice/AI Mic + Settings Menu -->
+        <div class="w-full grid grid-cols-3 gap-1.5 items-center px-1">
+            <button id="remote-btn-tv" onclick="handleVirtualRemoteButton('REMOTE_TV', 'Κουμπί TV Τηλεκοντρόλ')"
+                    title="Ζωντανή Τηλεόραση (Κανάλια)"
+                    class="py-2 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/10 text-slate-200 flex flex-col items-center justify-center gap-0.5 text-[10px] font-bold active:scale-95">
+                <i class="ph-bold ph-television text-sm text-sky-400"></i>
+                <span id="remote-label-tv">TV</span>
+            </button>
+
+            <button onclick="toggleAssistantPopup()"
+                    class="w-11 h-11 mx-auto rounded-full bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 text-white flex items-center justify-center shadow-lg shadow-indigo-500/40 hover:scale-105 active:scale-95 transition"
+                    title="Φωνητικός Βοηθός AI (Space)">
+                <i class="ph-fill ph-microphone text-lg"></i>
+            </button>
+
+            <button onclick="toggleQuickSettingsDrawer()" title="Ρυθμίσεις Τηλεόρασης"
+                    class="py-2 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/10 text-slate-200 flex flex-col items-center justify-center gap-0.5 text-[10px] font-bold active:scale-95">
+                <i class="ph-bold ph-gear-six text-sm text-indigo-400"></i>
+                <span>Μενού</span>
+            </button>
+        </div>
+
+        <!-- Row 3: Circular D-Pad Ring + Center OK (Supports Short & Long Press) -->
+        <div class="relative w-32 h-32 rounded-full bg-[#12151e] border border-white/10 shadow-inner flex items-center justify-center">
+            <button onclick="navigateDpad('up')"
+                    class="absolute top-1.5 left-1/2 -translate-x-1/2 w-10 h-8 rounded-t-full hover:bg-white/10 text-slate-300 hover:text-white flex items-center justify-center active:scale-90">
+                <i class="ph-bold ph-caret-up"></i>
+            </button>
+            <button onclick="navigateDpad('down')"
+                    class="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-10 h-8 rounded-b-full hover:bg-white/10 text-slate-300 hover:text-white flex items-center justify-center active:scale-90">
+                <i class="ph-bold ph-caret-down"></i>
+            </button>
+            <button onclick="navigateDpad('left')"
+                    class="absolute left-1.5 top-1/2 -translate-y-1/2 w-8 h-10 rounded-l-full hover:bg-white/10 text-slate-300 hover:text-white flex items-center justify-center active:scale-90">
+                <i class="ph-bold ph-caret-left"></i>
+            </button>
+            <button onclick="navigateDpad('right')"
+                    class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-10 rounded-r-full hover:bg-white/10 text-slate-300 hover:text-white flex items-center justify-center active:scale-90">
+                <i class="ph-bold ph-caret-right"></i>
+            </button>
+            <!-- Center OK Button: Short click = OK, Hold = Context Menu -->
+            <button onmousedown="startOkButtonPress()" onmouseup="endOkButtonPress()" ontouchstart="startOkButtonPress()" ontouchend="endOkButtonPress()"
+                    title="Πάτημα: OK • Κρατημένο: Μενού Εφαρμογής"
+                    class="w-12 h-12 rounded-full bg-gradient-to-b from-[#262b38] to-[#191d27] border border-white/15 text-white font-bold text-xs shadow-md hover:border-white/40 active:scale-95">
+                OK
+            </button>
+        </div>
+
+        <!-- Row 4: Back, Home, Inputs (HDMI) -->
+        <div class="w-full grid grid-cols-3 gap-1.5 px-1">
+            <button onclick="pressRemoteBack()" title="Πίσω (Backspace / Esc)"
+                    class="py-2 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/10 text-slate-200 flex items-center justify-center text-xs active:scale-95">
+                <i class="ph-bold ph-arrow-u-up-left"></i>
+            </button>
+            <button onclick="pressRemoteHome()" title="Αρχική Οθόνη (Home)"
+                    class="py-2 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/10 text-slate-200 flex items-center justify-center text-xs active:scale-95">
+                <i class="ph-bold ph-house"></i>
+            </button>
+            <button id="remote-btn-hdmi" onclick="handleVirtualRemoteButton('REMOTE_HDMI', 'Κουμπί HDMI Τηλεκοντρόλ')" title="Είσοδοι Εικόνας (HDMI)"
+                    class="py-2 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/10 text-slate-200 flex items-center justify-center text-[10px] font-bold active:scale-95">
+                <span id="remote-label-hdmi">HDMI</span>
+            </button>
+        </div>
+
+        <!-- Row 5: Dedicated Xiaomi Remote Streaming Hotkeys (100% Programmable via Key Learning!) -->
+        <div class="w-full grid grid-cols-2 gap-1.5 px-1">
+            <button id="remote-btn-netflix" onclick="handleVirtualRemoteButton('REMOTE_NETFLIX', 'Κουμπί NETFLIX Τηλεκοντρόλ')"
+                    class="py-1.5 px-1 rounded-xl bg-[#E50914] hover:bg-red-700 text-white text-[10px] font-black tracking-tight truncate active:scale-95">
+                <span id="remote-label-netflix">NETFLIX</span>
+            </button>
+            <button id="remote-btn-youtube" onclick="handleVirtualRemoteButton('REMOTE_YOUTUBE', 'Κουμπί YouTube Τηλεκοντρόλ')"
+                    class="py-1.5 px-1 rounded-xl bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold tracking-tight truncate active:scale-95">
+                <span id="remote-label-youtube">YouTube</span>
+            </button>
+            <button id="remote-btn-disney" onclick="handleVirtualRemoteButton('REMOTE_DISNEY', 'Κουμπί Disney+ Τηλεκοντρόλ')"
+                    class="py-1.5 px-1 rounded-xl bg-[#091b42] hover:bg-blue-900 border border-blue-400/20 text-blue-200 text-[10px] font-bold tracking-tight truncate active:scale-95">
+                <span id="remote-label-disney">Disney+</span>
+            </button>
+            <button id="remote-btn-cosmote" onclick="handleVirtualRemoteButton('REMOTE_COSMOTE', 'Κουμπί COSMOTE Τηλεκοντρόλ')"
+                    class="py-1.5 px-1 rounded-xl bg-emerald-950/90 hover:bg-emerald-900 border border-emerald-400/25 text-emerald-300 text-[10px] font-bold tracking-tight truncate active:scale-95">
+                <span id="remote-label-cosmote">COSMOTE</span>
+            </button>
+        </div>
+
+        <!-- Row 6: Volume Down, Mute, Volume Up -->
+        <div class="w-full grid grid-cols-3 gap-1.5 px-1">
+            <button onclick="adjustTvVolume(-5)"
+                    class="py-1.5 rounded-xl bg-white/5 hover:bg-white/15 text-slate-300 text-[11px] font-bold active:scale-95">
+                VOL -
+            </button>
+            <button onclick="toggleTvMute()"
+                    class="py-1.5 rounded-xl bg-white/5 hover:bg-white/15 text-slate-300 text-xs flex items-center justify-center active:scale-95">
+                <i id="remote-mute-icon" class="ph-bold ph-speaker-slash"></i>
+            </button>
+            <button onclick="adjustTvVolume(5)"
+                    class="py-1.5 rounded-xl bg-white/5 hover:bg-white/15 text-slate-300 text-[11px] font-bold active:scale-95">
+                VOL +
+            </button>
+        </div>
+    </aside>
+
+    <!-- ========================================================= -->
+    <!-- CORE OS ENGINE, KEY LEARNING & HARDWARE BRIDGE            -->
+    <!-- ========================================================= -->
+    <script>
+        // --- 1. HERO SPOTLIGHT CATALOG (WITH REAL NETFLIX WATCH IDs) ---
+        const spotlightCatalog = [
+            {
+                id: "extraction2",
+                watchId: "81098494",
+                title: "Extraction 2",
+                service: "NETFLIX",
+                category: "Δράση • Περιπέτεια • 4K Dolby Vision",
+                desc: "Επιστρέφοντας από το χείλος του θανάτου, ο κομάντο Τάιλερ Ρέικ αναλαμβάνει μια παράτολμη αποστολή διάσωσης μιας οικογένειας από μια αδίστακτη συμμορία.",
+                ambient: "radial-gradient(circle at 75% 24%, rgba(229, 9, 20, 0.42) 0%, rgba(17, 24, 39, 0.75) 48%, #040508 88%)",
+                bannerBg: "linear-gradient(95deg, rgba(5, 7, 14, 0.95) 0%, rgba(15, 18, 28, 0.75) 52%, rgba(229, 9, 20, 0.34) 100%)",
+                progress: 42
+            },
+            {
+                id: "3body",
+                watchId: "81024821",
+                title: "3 Body Problem",
+                service: "NETFLIX",
+                category: "Sci-Fi • Μυστήριο • 4K Dolby Vision",
+                desc: "Μια μοιραία απόφαση στην Κίνα του 1960 αντηχεί στον χώρο και τον χρόνο μέχρι το σήμερα, αναγκάζοντας μια ομάδα επιστημόνων να αντιμετωπίσει τη μεγαλύτερη απειλή του πλανήτη.",
+                ambient: "radial-gradient(circle at 75% 24%, rgba(59, 130, 246, 0.42) 0%, rgba(15, 23, 42, 0.75) 48%, #040508 88%)",
+                bannerBg: "linear-gradient(95deg, rgba(5, 7, 14, 0.95) 0%, rgba(15, 23, 42, 0.75) 52%, rgba(37, 99, 235, 0.34) 100%)",
+                progress: 68
+            },
+            {
+                id: "gentlemen",
+                watchId: "81437051",
+                title: "The Gentlemen",
+                service: "NETFLIX",
+                category: "Έγκλημα • Δράση • 4K Dolby Vision",
+                desc: "Όταν ο αριστοκράτης Έντι κληρονομεί την οικογενειακή έπαυλη, ανακαλύπτει ότι στεγάζει μια τεράστια αυτοκρατορία του υποκόσμου που δεν σκοπεύει να φύγει.",
+                ambient: "radial-gradient(circle at 75% 24%, rgba(16, 185, 129, 0.38) 0%, rgba(17, 24, 39, 0.75) 48%, #040508 88%)",
+                bannerBg: "linear-gradient(95deg, rgba(5, 7, 14, 0.95) 0%, rgba(15, 23, 42, 0.75) 52%, rgba(16, 185, 129, 0.32) 100%)",
+                progress: 25
+            },
+            {
+                id: "strangerthings",
+                watchId: "80057281",
+                title: "Stranger Things",
+                service: "NETFLIX",
+                category: "Θρίλερ • Υπερφυσικό • 4K HDR10+",
+                desc: "Στη μικρή πόλη Χόκινς, μια ομάδα φίλων έρχεται αντιμέτωπη με μυστικά κυβερνητικά πειράματα και σκοτεινές δυνάμεις από το Upside Down.",
+                ambient: "radial-gradient(circle at 75% 24%, rgba(168, 85, 247, 0.42) 0%, rgba(17, 24, 39, 0.75) 48%, #040508 88%)",
+                bannerBg: "linear-gradient(95deg, rgba(5, 7, 14, 0.95) 0%, rgba(24, 15, 42, 0.75) 52%, rgba(147, 51, 234, 0.34) 100%)",
+                progress: 85
+            },
+            {
+                id: "berlin",
+                watchId: "81586657",
+                title: "La Casa de Papel: Berlin",
+                service: "NETFLIX",
+                category: "Ληστεία • Δράση • 4K Dolby Vision",
+                desc: "Στα καλύτερά του χρόνια, ο Μπερλίν συγκεντρώνει μια αριστοτεχνική συμμορία στο Παρίσι για να κλέψει κοσμήματα αξίας 44 εκατομμυρίων ευρώ σε μία νύχτα.",
+                ambient: "radial-gradient(circle at 75% 24%, rgba(245, 158, 11, 0.38) 0%, rgba(17, 24, 39, 0.75) 48%, #040508 88%)",
+                bannerBg: "linear-gradient(95deg, rgba(5, 7, 14, 0.95) 0%, rgba(28, 19, 12, 0.75) 52%, rgba(217, 119, 6, 0.32) 100%)",
+                progress: 55
+            }
+        ];
+
+        // --- 2. GREEK LIVE TV CHANNELS (DIGEA / TUNER) ---
+        const liveTvChannels = [
+            { ch: 1, name: "ΕΡΤ1 HD", prog: "Ειδήσεις / Ενημέρωση", color: "from-blue-900/60 to-slate-900", badge: "1080i HD" },
+            { ch: 2, name: "MEGA HD", prog: "Ζωντανό Πρόγραμμα • Σειρά", color: "from-indigo-900/60 to-slate-900", badge: "1080i HD" },
+            { ch: 3, name: "ANT1 HD", prog: "Ψυχαγωγία • Ζωντανά", color: "from-amber-900/50 to-slate-900", badge: "1080i HD" },
+            { ch: 4, name: "ALPHA HD", prog: "Οικογενειακή Σειρά", color: "from-rose-900/50 to-slate-900", badge: "1080i HD" },
+            { ch: 5, name: "STAR HD", prog: "Ξένη Ταινία • Πρεμιέρα", color: "from-purple-900/50 to-slate-900", badge: "1080i HD" },
+            { ch: 6, name: "ΣΚΑΪ HD", prog: "Ενημέρωση / Ντοκιμαντέρ", color: "from-sky-900/60 to-slate-900", badge: "1080i HD" },
+            { ch: 7, name: "OPEN HD", prog: "Ζωντανή Εκπομπή", color: "from-pink-900/50 to-slate-900", badge: "1080i HD" },
+            { ch: 8, name: "COSMOTE SPORT 1", prog: "UEFA Champions League 4K", color: "from-emerald-900/60 to-slate-900", badge: "4K HDR" }
+        ];
+        let currentChannelIdx = 1; // Default MEGA HD
+        let isWatchingLiveTv = false;
+
+        // --- 3. INSTALLED TV APPLICATIONS (AUTO-REPLACED WHEN CONNECTED TO TV) ---
+        let installedApps = [
+            {
+                id: "netflix",
+                name: "Netflix",
+                pkg: "com.netflix.ninja",
+                glow: "rgba(229, 9, 20, 0.65)",
+                ambient: "radial-gradient(circle at 50% 50%, rgba(229, 9, 20, 0.35) 0%, #040508 85%)",
+                bgClass: "from-[#1a0507] to-[#0d0608]",
+                showOnHome: true,
+                svg: `<svg viewBox="0 0 24 24" class="w-8 h-8 fill-[#E50914]"><path d="M5.398 0v.006c3.028 8.556 5.37 15.175 8.348 23.596 2.344.058 4.85.398 4.854.398-2.8-7.924-5.923-16.747-8.487-24zm8.489 0v9.63L18.6 22.951c-.043-7.86-.004-15.913.002-22.95zM5.398 1.05V24c1.873-.225 2.81-.312 4.715-.398v-9.22z"/></svg>`
+            },
+            {
+                id: "smarttube",
+                name: "SmartTube",
+                pkg: "com.liskovsoft.smarttubetv.beta",
+                glow: "rgba(239, 68, 68, 0.6)",
+                ambient: "radial-gradient(circle at 50% 50%, rgba(239, 68, 68, 0.32) 0%, #040508 85%)",
+                bgClass: "from-[#21090c] to-[#0f080b]",
+                showOnHome: true,
+                svg: `<i class="ph-fill ph-youtube-logo text-3xl text-red-500"></i>`
+            },
+            {
+                id: "cosmotetv",
+                name: "Cosmote TV",
+                pkg: "gr.cosmote.cosmotetv.androidtv",
+                glow: "rgba(16, 185, 129, 0.6)",
+                ambient: "radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.30) 0%, #040508 85%)",
+                bgClass: "from-[#062118] to-[#071210]",
+                showOnHome: true,
+                svg: `<i class="ph-fill ph-soccer-ball text-3xl text-emerald-400"></i>`
+            },
+            {
+                id: "ertflix",
+                name: "ERTFLIX",
+                pkg: "gr.ert.ertflix",
+                glow: "rgba(14, 165, 233, 0.6)",
+                ambient: "radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.32) 0%, #040508 85%)",
+                bgClass: "from-[#071c29] to-[#081018]",
+                showOnHome: true,
+                svg: `<i class="ph-fill ph-film-strip text-3xl text-sky-400"></i>`
+            },
+            {
+                id: "disney",
+                name: "Disney+",
+                pkg: "com.disney.disneyplus",
+                glow: "rgba(59, 130, 246, 0.6)",
+                ambient: "radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.34) 0%, #040508 85%)",
+                bgClass: "from-[#09152e] to-[#070b17]",
+                showOnHome: true,
+                svg: `<i class="ph-fill ph-shooting-star text-3xl text-blue-400"></i>`
+            },
+            {
+                id: "eontv",
+                name: "EON TV",
+                pkg: "com.ug.eon.android.tv",
+                glow: "rgba(56, 189, 248, 0.6)",
+                ambient: "radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.30) 0%, #040508 85%)",
+                bgClass: "from-[#081d26] to-[#081017]",
+                showOnHome: true,
+                svg: `<i class="ph-fill ph-broadcast text-3xl text-cyan-400"></i>`
+            },
+            {
+                id: "stremio",
+                name: "Stremio",
+                pkg: "com.stremio.one",
+                glow: "rgba(139, 92, 246, 0.65)",
+                ambient: "radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.34) 0%, #040508 85%)",
+                bgClass: "from-[#180d2b] to-[#0c0814]",
+                showOnHome: true,
+                svg: `<i class="ph-fill ph-play-circle text-3xl text-purple-400"></i>`
+            },
+            {
+                id: "spotify",
+                name: "Spotify",
+                pkg: "com.spotify.tv.android",
+                glow: "rgba(34, 197, 94, 0.6)",
+                ambient: "radial-gradient(circle at 50% 50%, rgba(34, 197, 94, 0.30) 0%, #040508 85%)",
+                bgClass: "from-[#072112] to-[#07120c]",
+                showOnHome: true,
+                svg: `<i class="ph-fill ph-spotify-logo text-3xl text-green-400"></i>`
+            },
+            {
+                id: "twitch",
+                name: "Twitch",
+                pkg: "tv.twitch.android.app",
+                glow: "rgba(168, 85, 247, 0.6)",
+                ambient: "radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.32) 0%, #040508 85%)",
+                bgClass: "from-[#1f0b2e] to-[#0e0814]",
+                showOnHome: true,
+                svg: `<i class="ph-fill ph-twitch-logo text-3xl text-purple-400"></i>`
+            },
+            {
+                id: "kodi",
+                name: "Kodi",
+                pkg: "org.xbmc.kodi",
+                glow: "rgba(14, 165, 233, 0.6)",
+                ambient: "radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.32) 0%, #040508 85%)",
+                bgClass: "from-[#071c2b] to-[#070f17]",
+                showOnHome: true,
+                svg: `<i class="ph-fill ph-cube text-3xl text-sky-400"></i>`
+            }
+        ];
+
+        // --- 4. XIAOMI TV MAX 85" (2025) HDMI & TUNER INPUTS ---
+        let tvInputs = [
+            { id: "livetv", name: "Κεραία TV (Digea)", label: "Ζωντανά Κανάλια Τηλεόρασης", icon: "ph-television", active: true, spec: "HD Κανάλια" },
+            { id: "hdmi1", name: "HDMI 1", label: "Αποκωδικοποιητής / TV Box", icon: "ph-plugs-connected", active: false, spec: "4K 60Hz" },
+            { id: "hdmi2", name: "HDMI 2", label: "PlayStation 5 / Gaming PC", icon: "ph-game-controller", active: true, spec: "4K 144Hz VRR" },
+            { id: "hdmi3", name: "HDMI 3 (eARC)", label: "Dolby Atmos Ηχόμπαρα", icon: "ph-speaker-hifi", active: true, spec: "eARC Ήχος" },
+            { id: "miracast", name: "Ασύρματη Οθόνη", label: "Google Cast / Κινητό στην TV", icon: "ph-screencast", active: true, spec: "Wi-Fi" }
+        ];
+
+        // --- 5. INTERACTIVE REMOTE KEY LEARNING ("ΕΚΜΑΘΗΣΗ ΚΟΥΜΠΙΟΥ") ---
+        const availableRemoteActions = [
+            { id: "livetv", label: "Ζωντανή Τηλεόραση (Κανάλια)", shortLabel: "TV", icon: "ph-television" },
+            { id: "netflix", label: "Netflix", shortLabel: "NETFLIX", icon: "ph-film-slate" },
+            { id: "smarttube", label: "SmartTube (YouTube)", shortLabel: "YouTube", icon: "ph-youtube-logo" },
+            { id: "ertflix", label: "ERTFLIX", shortLabel: "ERTFLIX", icon: "ph-film-strip" },
+            { id: "cosmotetv", label: "Cosmote TV", shortLabel: "COSMOTE", icon: "ph-soccer-ball" },
+            { id: "eontv", label: "EON TV", shortLabel: "EON TV", icon: "ph-broadcast" },
+            { id: "disney", label: "Disney+", shortLabel: "Disney+", icon: "ph-shooting-star" },
+            { id: "stremio", label: "Stremio", shortLabel: "Stremio", icon: "ph-play-circle" },
+            { id: "kodi", label: "Kodi", shortLabel: "Kodi", icon: "ph-cube" },
+            { id: "spotify", label: "Spotify", shortLabel: "Spotify", icon: "ph-spotify-logo" },
+            { id: "twitch", label: "Twitch", shortLabel: "Twitch", icon: "ph-twitch-logo" },
+            { id: "inputs", label: "Είσοδοι Εικόνας (HDMI)", shortLabel: "HDMI", icon: "ph-plugs-connected" },
+            { id: "assistant", label: "Φωνητικός Βοηθός AI", shortLabel: "AI", icon: "ph-microphone" },
+            { id: "ramboost", label: "Καθαρισμός Μνήμης", shortLabel: "Boost", icon: "ph-lightning" }
+        ];
+
+        const defaultKeyBindings = {
+            "REMOTE_TV": { keyLabel: "Κουμπί TV Τηλεκοντρόλ", actionId: "livetv" },
+            "REMOTE_HDMI": { keyLabel: "Κουμπί HDMI Τηλεκοντρόλ", actionId: "inputs" },
+            "REMOTE_NETFLIX": { keyLabel: "Κουμπί NETFLIX Τηλεκοντρόλ", actionId: "netflix" },
+            "REMOTE_YOUTUBE": { keyLabel: "Κουμπί YouTube Τηλεκοντρόλ", actionId: "smarttube" },
+            "REMOTE_DISNEY": { keyLabel: "Κουμπί Disney+ Τηλεκοντρόλ", actionId: "disney" },
+            "REMOTE_COSMOTE": { keyLabel: "Κουμπί COSMOTE Τηλεκοντρόλ", actionId: "cosmotetv" },
+            "KeyT": { keyLabel: "Πλήκτρο [T] (TV)", actionId: "livetv" }
+        };
+
+        let customKeyBindings = JSON.parse(localStorage.getItem("xiaomi_learned_keys_v2") || "null") || { ...defaultKeyBindings };
+        let isCapturingRemoteKey = false;
+        let pendingCapturedKeyId = null;
+        let pendingCapturedKeyLabel = null;
+
+        // --- 6. SYSTEM STATE & VISUAL FILTERS ---
+        let currentHeroIdx = 0;
+        let activeTab = "home";
+        let isPlaying = true;
+        let tvVolume = 35;
+        let isMuted = false;
+        let volumeTimeout = null;
+        let toastTimeout = null;
+        let currentFocusIndex = 0;
+        let uiSoundsEnabled = true;
+        let selectedContextAppIdx = 0;
+        let okPressTimer = null;
+        let okLongPressTriggered = false;
+        let bridgeUrl = localStorage.getItem("xiaomi_bridge_url") || "http://localhost:8765";
+        let userGeminiKey = localStorage.getItem("xiaomi_gemini_key") || "";
+        let isBridgeConnected = false;
+
+        const pictureModes = [
+            { name: "Σινεμά (Dolby Vision)", filter: "contrast(1.06) saturate(1.08)" },
+            { name: "Κανονικό (Ισορροπημένο)", filter: "contrast(1.0) saturate(1.0)" },
+            { name: "Ζωντανό (4K QLED)", filter: "contrast(1.14) saturate(1.30)" },
+            { name: "Παιχνίδι 144Hz (VRR)", filter: "contrast(1.08) saturate(1.15)" }
+        ];
+        let picModeIdx = 0;
+
+        const brightnessLevels = [
+            { name: "100% (Κανονική)", val: 1.0 },
+            { name: "80% (Ξεκούραστη / Βράδυ)", val: 0.82 },
+            { name: "65% (Σκοτεινό Δωμάτιο)", val: 0.68 },
+            { name: "115% (Ενίσχυση HDR)", val: 1.12 }
+        ];
+        let brightIdx = 0;
+
+        const audioOutputs = [
+            "Ηχόμπαρα HDMI (Dolby Atmos)",
+            "Ηχεία Τηλεόρασης Xiaomi",
+            "Οπτική Ίνα (S/PDIF)",
+            "Ακουστικά Bluetooth"
+        ];
+        let audioOutIdx = 0;
+
+        function applyScreenVisualFilters() {
+            const pFilter = pictureModes[picModeIdx].filter;
+            const bVal = brightnessLevels[brightIdx].val;
+            document.body.style.filter = `${pFilter} brightness(${bVal})`;
+        }
+
+        // --- 7. SUBTLE WEB AUDIO D-PAD SOUND SYNTHESIZER ---
+        let audioCtx = null;
+        function playUiTick(freq = 280, duration = 0.03) {
+            if (!uiSoundsEnabled) return;
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === "suspended") audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = "sine";
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.035, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) {}
+        }
+
+        // --- 8. HARDWARE BRIDGE AUTO-DETECTION (HIDES PC SETUP GUIDE ON REAL TV) ---
+        async function initHardwareBridge() {
+            if (window.AndroidTVBridge) {
+                try {
+                    const nativeAppsJson = window.AndroidTVBridge.getInstalledApps();
+                    if (nativeAppsJson) {
+                        const parsed = JSON.parse(nativeAppsJson);
+                        if (Array.isArray(parsed) && parsed.length > 0) installedApps = parsed;
+                    }
+                    const nativeInputsJson = window.AndroidTVBridge.getTvInputs();
+                    if (nativeInputsJson) {
+                        const parsedIn = JSON.parse(nativeInputsJson);
+                        if (Array.isArray(parsedIn) && parsedIn.length > 0) tvInputs = parsedIn;
+                    }
+                    isBridgeConnected = true;
+                    // Automatically hide PC installation guide when running on the real TV!
+                    const setupGuideEl = document.getElementById("pc-setup-guide-container");
+                    if (setupGuideEl) setupGuideEl.classList.add("hidden");
+                } catch (e) {}
+            }
+
+            try {
+                const res = await fetch(`${bridgeUrl}/status`, { method: "GET" });
+                if (res.ok) {
+                    isBridgeConnected = true;
+                    document.getElementById("bridge-status-badge").textContent = "Συνδεδεμένη TV";
+                    showTvToast("Συνδέθηκε με την Xiaomi TV Max 85\"!");
+                }
+            } catch (e) {}
+
+            renderAllViews();
+            updateVirtualRemoteLabels();
+        }
+
+        // --- 9. RENDER HOME, APPS, LIVE TV & DRAWERS ---
+        function renderAllViews() {
+            const appsRow = document.getElementById("home-apps-row");
+            const visibleApps = installedApps.filter(a => a.showOnHome);
+
+            appsRow.innerHTML = visibleApps.map((app) => {
+                const realIdx = installedApps.findIndex(x => x.id === app.id);
+                return `
+                <button onclick="launchTvAppById('${app.id}')"
+                        oncontextmenu="event.preventDefault(); openAppContextMenu(${realIdx});"
+                        onmouseenter="setAmbientBg('${app.ambient}')"
+                        onfocus="setAmbientBg('${app.ambient}')"
+                        data-app-idx="${realIdx}"
+                        style="--focus-glow: ${app.glow};"
+                        class="tv-focusable rounded-2xl p-3.5 bg-gradient-to-br ${app.bgClass} border border-white/10 flex flex-col items-center justify-center gap-2 h-24 shadow-lg">
+                    <div class="flex items-center justify-center">
+                        ${app.svg}
+                    </div>
+                    <span class="text-xs font-semibold text-slate-100 truncate w-full text-center">${app.name}</span>
+                </button>`;
+            }).join('');
+
+            // Render 16:9 Continue Watching Cards
+            const moviesRow = document.getElementById("home-movies-row");
+            moviesRow.innerHTML = spotlightCatalog.map((movie, i) => `
+                <button onclick="launchMoviePlayback(${i})"
+                        onmouseenter="previewHeroMovie(${i})"
+                        onfocus="previewHeroMovie(${i})"
+                        style="--focus-glow: rgba(255, 255, 255, 0.45);"
+                        class="tv-focusable group rounded-2xl overflow-hidden tv-glass border border-white/10 text-left flex flex-col justify-between h-36 p-4 relative shadow-lg">
+                    <div class="absolute inset-0 -z-10 opacity-75 transition-transform duration-500 group-hover:scale-105"
+                         style="background: ${movie.bannerBg};"></div>
+
+                    <div class="flex items-center justify-between w-full">
+                        <span class="px-2 py-0.5 rounded bg-[#E50914] text-white font-extrabold text-[9px] tracking-wider uppercase">
+                            ${movie.service}
+                        </span>
+                        <span class="w-7 h-7 rounded-full bg-white/15 backdrop-blur flex items-center justify-center text-white">
+                            <i class="ph-fill ph-play text-xs"></i>
+                        </span>
+                    </div>
+
+                    <div>
+                        <div class="text-sm font-bold text-white truncate">${movie.title}</div>
+                        <div class="text-[11px] text-slate-300 truncate mb-2">${movie.category}</div>
+                        <div class="w-full h-1 bg-white/20 rounded-full overflow-hidden">
+                            <div class="h-full bg-[#E50914]" style="width: ${movie.progress}%;"></div>
+                        </div>
+                    </div>
+                </button>
+            `).join('');
+
+            // Render All Apps Grid
+            const allGrid = document.getElementById("all-apps-grid");
+            if (allGrid) {
+                allGrid.innerHTML = installedApps.map((app, realIdx) => `
+                    <button onclick="launchTvAppById('${app.id}')"
+                            oncontextmenu="event.preventDefault(); openAppContextMenu(${realIdx});"
+                            data-app-idx="${realIdx}"
+                            style="--focus-glow: ${app.glow};"
+                            class="tv-focusable rounded-3xl p-6 bg-gradient-to-br ${app.bgClass} border border-white/15 flex flex-col items-center justify-center gap-3 h-36 shadow-xl">
+                        <div class="scale-125">${app.svg}</div>
+                        <div class="text-sm font-bold text-white">${app.name}</div>
+                    </button>
+                `).join('');
+            }
+
+            // Render Live TV Channels Grid
+            const tvGrid = document.getElementById("live-tv-grid");
+            if (tvGrid) {
+                tvGrid.innerHTML = liveTvChannels.map((channel, idx) => `
+                    <button onclick="tuneLiveTvChannel(${idx})"
+                            style="--focus-glow: rgba(56, 189, 248, 0.6);"
+                            class="tv-focusable rounded-3xl p-5 bg-gradient-to-br ${channel.color} border border-white/15 flex flex-col justify-between h-36 text-left shadow-xl">
+                        <div class="flex items-center justify-between w-full">
+                            <span class="px-2.5 py-0.5 rounded-lg bg-white/15 text-white font-black text-xs">
+                                CH ${channel.ch}
+                            </span>
+                            <span class="text-[10px] font-bold text-sky-300 bg-sky-500/20 px-2 py-0.5 rounded-full">
+                                ${channel.badge}
+                            </span>
+                        </div>
+                        <div>
+                            <div class="text-lg font-extrabold text-white">${channel.name}</div>
+                            <div class="text-xs text-slate-300 truncate mt-0.5">${channel.prog}</div>
+                        </div>
+                    </button>
+                `).join('');
+            }
+
+            // Render Inputs Drawer (Using .tv-drawer-item so zero horizontal clipping occurs)
+            const inputsList = document.getElementById("inputs-drawer-list");
+            if (inputsList) {
+                inputsList.innerHTML = tvInputs.map(inp => `
+                    <button onclick="launchInputSource('${inp.id}', '${inp.name}', '${inp.label}')"
+                            class="tv-focusable tv-drawer-item w-full p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-between text-left">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-sky-300 shrink-0">
+                                <i class="ph-fill ${inp.icon} text-xl"></i>
+                            </div>
+                            <div>
+                                <div class="text-xs font-bold text-white">${inp.name}</div>
+                                <div class="text-[11px] text-slate-400">${inp.label}</div>
+                            </div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${inp.active ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/10 text-slate-400'}">
+                                ${inp.active ? 'Ενεργό' : 'Αναμονή'}
+                            </span>
+                            <div class="text-[10px] text-slate-500 mt-0.5">${inp.spec}</div>
+                        </div>
+                    </button>
+                `).join('');
+            }
+
+            // Render Quick Settings App Visibility Toggles
+            const togglesBox = document.getElementById("drawer-apps-toggles");
+            if (togglesBox) {
+                togglesBox.innerHTML = installedApps.map((app, idx) => `
+                    <button onclick="toggleAppHomeVisibility(${idx})"
+                            class="tv-focusable tv-drawer-item p-2.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between text-left">
+                        <span class="text-[11px] font-semibold text-white truncate">${app.name}</span>
+                        <span class="w-2.5 h-2.5 rounded-full shrink-0 ${app.showOnHome ? 'bg-emerald-400' : 'bg-slate-600'}"></span>
+                    </button>
+                `).join('');
+            }
+        }
+
+        function toggleAppHomeVisibility(idx) {
+            installedApps[idx].showOnHome = !installedApps[idx].showOnHome;
+            playUiTick(340, 0.04);
+            renderAllViews();
+        }
+
+        // --- 10. INTERACTIVE KEY LEARNING ("ΕΚΜΑΘΗΣΗ ΚΟΥΜΠΙΟΥ ΤΗΛΕΚΟΝΤΡΟΛ") ---
+        function openRemoteMapperModal() {
+            playUiTick(380, 0.04);
+            closeAllDrawers();
+            isCapturingRemoteKey = false;
+            showKeyLearnStep("list");
+            renderProgrammedKeysList();
+            const modal = document.getElementById("remote-mapper-modal");
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+        }
+
+        function closeRemoteMapperModal() {
+            isCapturingRemoteKey = false;
+            const modal = document.getElementById("remote-mapper-modal");
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        }
+
+        function showKeyLearnStep(stepName) {
+            const sList = document.getElementById("key-learn-step-list");
+            const sListen = document.getElementById("key-learn-step-listen");
+            const sAction = document.getElementById("key-learn-step-action");
+
+            sList.classList.add("hidden");
+            sListen.classList.add("hidden");
+            sListen.classList.remove("flex");
+            sAction.classList.add("hidden");
+
+            if (stepName === "list") {
+                sList.classList.remove("hidden");
+            } else if (stepName === "listen") {
+                sListen.classList.remove("hidden");
+                sListen.classList.add("flex");
+            } else if (stepName === "action") {
+                sAction.classList.remove("hidden");
+            }
+        }
+
+        function startKeyCaptureMode() {
+            playUiTick(460, 0.05);
+            isCapturingRemoteKey = true;
+            pendingCapturedKeyId = null;
+            pendingCapturedKeyLabel = null;
+            showKeyLearnStep("listen");
+        }
+
+        function cancelKeyCaptureMode() {
+            playUiTick(240, 0.04);
+            isCapturingRemoteKey = false;
+            showKeyLearnStep("list");
+        }
+
+        // Called when user presses ANY physical remote/keyboard key OR clicks a virtual remote button while listening
+        function onRemoteKeyCaptured(keyId, humanLabel) {
+            playUiTick(520, 0.06);
+            isCapturingRemoteKey = false;
+            pendingCapturedKeyId = keyId;
+            pendingCapturedKeyLabel = humanLabel;
+
+            document.getElementById("captured-key-badge").textContent = humanLabel;
+
+            // Populate Step 2 Action Grid
+            const currentAssigned = customKeyBindings[keyId]?.actionId || "";
+            const grid = document.getElementById("key-learn-actions-grid");
+            grid.innerHTML = availableRemoteActions.map(act => {
+                const isSelected = act.id === currentAssigned;
+                return `
+                <button onclick="saveLearnedKeyAction('${act.id}')"
+                        class="tv-focusable tv-drawer-item p-3 rounded-2xl ${isSelected ? 'bg-indigo-600/40 border-indigo-400' : 'bg-white/5 hover:bg-white/10 border-white/10'} border flex items-center gap-3 text-left">
+                    <div class="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-indigo-300 shrink-0">
+                        <i class="ph-fill ${act.icon} text-lg"></i>
+                    </div>
+                    <span class="text-xs font-bold text-white truncate">${act.label}</span>
+                </button>`;
+            }).join('');
+
+            showKeyLearnStep("action");
+        }
+
+        function saveLearnedKeyAction(actionId) {
+            if (!pendingCapturedKeyId) return;
+            playUiTick(480, 0.05);
+
+            customKeyBindings[pendingCapturedKeyId] = {
+                keyLabel: pendingCapturedKeyLabel,
+                actionId: actionId
+            };
+            localStorage.setItem("xiaomi_learned_keys_v2", JSON.stringify(customKeyBindings));
+
+            const chosenAct = availableRemoteActions.find(a => a.id === actionId);
+            showTvToast(`${pendingCapturedKeyLabel} ➔ ${chosenAct ? chosenAct.label : actionId}`);
+
+            updateVirtualRemoteLabels();
+            renderProgrammedKeysList();
+            showKeyLearnStep("list");
+        }
+
+        function deleteKeyBinding(keyId) {
+            playUiTick(260, 0.04);
+            delete customKeyBindings[keyId];
+            localStorage.setItem("xiaomi_learned_keys_v2", JSON.stringify(customKeyBindings));
+            updateVirtualRemoteLabels();
+            renderProgrammedKeysList();
+            showTvToast("Η συντόμευση κουμπιού αφαιρέθηκε");
+        }
+
+        function resetAllRemoteBindings() {
+            playUiTick(340, 0.04);
+            customKeyBindings = { ...defaultKeyBindings };
+            localStorage.setItem("xiaomi_learned_keys_v2", JSON.stringify(customKeyBindings));
+            updateVirtualRemoteLabels();
+            renderProgrammedKeysList();
+            showTvToast("Τα κουμπιά επανήλθαν στις εργοστασιακές ρυθμίσεις");
+        }
+
+        function renderProgrammedKeysList() {
+            const container = document.getElementById("programmed-keys-list");
+            if (!container) return;
+            const entries = Object.entries(customKeyBindings);
+
+            if (entries.length === 0) {
+                container.innerHTML = `<div class="text-xs text-slate-400 p-4 text-center bg-white/5 rounded-2xl">Δεν έχεις ορίσει κουμπιά ακόμη. Πάτησε «Ορισμός Κουμπιού» πιο πάνω.</div>`;
+                return;
+            }
+
+            container.innerHTML = entries.map(([keyId, info]) => {
+                const act = availableRemoteActions.find(a => a.id === info.actionId) || availableRemoteActions[0];
+                return `
+                <div class="p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300 shrink-0">
+                            <i class="ph-fill ${act.icon} text-base"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="text-xs font-extrabold text-white truncate">${info.keyLabel}</div>
+                            <div class="text-[11px] text-emerald-300 font-medium truncate">Ανοίγει: ${act.label}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        <button onclick="onRemoteKeyCaptured('${keyId}', '${info.keyLabel.replace(/'/g, "")}')"
+                                class="px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 text-[11px] font-bold text-slate-200">
+                            Αλλαγή
+                        </button>
+                        <button onclick="deleteKeyBinding('${keyId}')"
+                                title="Διαγραφή"
+                                class="w-7 h-7 rounded-xl bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 flex items-center justify-center text-xs">
+                            <i class="ph-bold ph-trash"></i>
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function updateVirtualRemoteLabels() {
+            const mapVirtual = [
+                { keyId: "REMOTE_TV", spanId: "remote-label-tv", fallback: "TV" },
+                { keyId: "REMOTE_HDMI", spanId: "remote-label-hdmi", fallback: "HDMI" },
+                { keyId: "REMOTE_NETFLIX", spanId: "remote-label-netflix", fallback: "NETFLIX" },
+                { keyId: "REMOTE_YOUTUBE", spanId: "remote-label-youtube", fallback: "YouTube" },
+                { keyId: "REMOTE_DISNEY", spanId: "remote-label-disney", fallback: "Disney+" },
+                { keyId: "REMOTE_COSMOTE", spanId: "remote-label-cosmote", fallback: "COSMOTE" }
+            ];
+
+            mapVirtual.forEach(item => {
+                const el = document.getElementById(item.spanId);
+                if (!el) return;
+                const binding = customKeyBindings[item.keyId];
+                if (binding) {
+                    const act = availableRemoteActions.find(a => a.id === binding.actionId);
+                    el.textContent = act ? act.shortLabel : item.fallback;
+                } else {
+                    el.textContent = item.fallback;
+                }
+            });
+        }
+
+        // Handles clicking on a virtual remote programmable button
+        function handleVirtualRemoteButton(virtualKeyId, humanName) {
+            if (isCapturingRemoteKey) {
+                onRemoteKeyCaptured(virtualKeyId, humanName);
+                return;
+            }
+            const binding = customKeyBindings[virtualKeyId];
+            const actionId = binding ? binding.actionId : "livetv";
+            executeRemoteActionById(actionId);
+        }
+
+        function executeRemoteActionById(actionId) {
+            closeRemoteMapperModal();
+            closeAllDrawers();
+
+            if (actionId === "livetv") {
+                openLiveTvDirect();
+            } else if (actionId === "inputs") {
+                toggleInputsDrawer();
+            } else if (actionId === "assistant") {
+                toggleAssistantPopup();
+            } else if (actionId === "ramboost") {
+                boostTvRam();
+            } else {
+                launchTvAppById(actionId);
+            }
+        }
+
+        // --- 11. LIVE TV TUNER & CHANNEL UP/DOWN ENGINE ---
+        async function openLiveTvDirect() {
+            playUiTick(420, 0.05);
+            // If running on real Xiaomi TV, send native Android KEYCODE_TV (170) to open real antenna TV!
+            if (window.AndroidTVBridge && window.AndroidTVBridge.openLiveTv) {
+                window.AndroidTVBridge.openLiveTv();
+                return;
+            }
+            if (isBridgeConnected) {
+                try {
+                    await fetch(`${bridgeUrl}/live_tv`, { method: "POST" });
+                } catch (e) {}
+            }
+            tuneLiveTvChannel(currentChannelIdx);
+        }
+
+        function tuneLiveTvChannel(idx) {
+            playUiTick(400, 0.04);
+            currentChannelIdx = (idx + liveTvChannels.length) % liveTvChannels.length;
+            const ch = liveTvChannels[currentChannelIdx];
+            isWatchingLiveTv = true;
+
+            document.getElementById("player-service-tag").textContent = `ΖΩΝΤΑΝΗ ΤΗΛΕΟΡΑΣΗ • ΚΑΝΑΛΙ ${ch.ch}`;
+            document.getElementById("player-title").textContent = `${ch.name} — ${ch.prog}`;
+            document.getElementById("player-status-label").textContent = `Ζωντανή Μετάδοση Κεραίας • Άλλαξε κανάλι με το Πάνω / Κάτω στο τηλεκοντρόλ`;
+
+            const chControls = document.getElementById("live-tv-channel-controls");
+            chControls.classList.remove("hidden");
+            chControls.classList.add("flex");
+
+            closeAllDrawers();
+            const overlay = document.getElementById("player-overlay");
+            overlay.classList.remove("hidden");
+            overlay.classList.add("flex");
+            showTvToast(`Κανάλι ${ch.ch}: ${ch.name}`);
+        }
+
+        function changeLiveTvChannel(delta) {
+            tuneLiveTvChannel(currentChannelIdx + delta);
+        }
+
+        // --- 12. HERO SPOTLIGHT, APPS & NETFLIX DEEP LINKS ---
+        function previewHeroMovie(idx) {
+            currentHeroIdx = idx;
+            const m = spotlightCatalog[idx];
+            document.getElementById("hero-title").textContent = m.title;
+            document.getElementById("hero-category-pill").textContent = m.category;
+            document.getElementById("hero-desc").textContent = m.desc;
+            document.getElementById("hero-banner").style.background = m.bannerBg;
+            setAmbientBg(m.ambient);
+        }
+
+        function cycleHeroSpotlight() {
+            playUiTick(320, 0.04);
+            const next = (currentHeroIdx + 1) % spotlightCatalog.length;
+            previewHeroMovie(next);
+        }
+
+        function setAmbientBg(bgValue) {
+            document.getElementById("ambient-bg").style.background = bgValue;
+        }
+
+        function playCurrentHeroMovie() {
+            const m = spotlightCatalog[currentHeroIdx];
+            launchMoviePlayback(currentHeroIdx, m.title, "NETFLIX", m.watchId);
+        }
+
+        async function launchMoviePlayback(idx, customTitle = null, customService = "NETFLIX", watchId = null) {
+            playUiTick(420, 0.05);
+            isWatchingLiveTv = false;
+            const chControls = document.getElementById("live-tv-channel-controls");
+            chControls.classList.add("hidden");
+            chControls.classList.remove("flex");
+
+            const movie = spotlightCatalog[idx] || spotlightCatalog[0];
+            const titleToUse = customTitle || movie.title;
+            const targetWatchId = watchId || movie.watchId || "81098494";
+
+            // On real Xiaomi TV, launches the native Netflix APK directly into the movie!
+            if (window.AndroidTVBridge && window.AndroidTVBridge.launchNetflixWatch) {
+                window.AndroidTVBridge.launchNetflixWatch(targetWatchId);
+                return;
+            }
+            if (isBridgeConnected) {
+                try {
+                    await fetch(`${bridgeUrl}/netflix_watch`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ watchId: targetWatchId })
+                    });
+                } catch (e) {}
+            }
+
+            document.getElementById("player-service-tag").textContent = customService;
+            document.getElementById("player-title").textContent = titleToUse;
+            document.getElementById("player-visual-bg").style.background = movie.ambient;
+            document.getElementById("player-status-label").textContent = `Αναπαραγωγή «${titleToUse}» (Στην TV ανοίγει η κανονική εφαρμογή ${customService})`;
+
+            isPlaying = true;
+            document.getElementById("player-state-icon").className = "ph-fill ph-pause text-4xl";
+
+            closeAllDrawers();
+            const overlay = document.getElementById("player-overlay");
+            overlay.classList.remove("hidden");
+            overlay.classList.add("flex");
+        }
+
+        async function launchTvAppById(appId) {
+            playUiTick(420, 0.05);
+            const app = installedApps.find(a => a.id === appId);
+            if (!app) return;
+
+            // On real Xiaomi TV, launches the actual Android TV App Package!
+            if (window.AndroidTVBridge && window.AndroidTVBridge.launchApp) {
+                window.AndroidTVBridge.launchApp(app.pkg);
+                return;
+            }
+            if (isBridgeConnected) {
+                try {
+                    await fetch(`${bridgeUrl}/launch_app`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ package: app.pkg })
+                    });
+                } catch (e) {}
+            }
+
+            if (app.id === "netflix") {
+                playCurrentHeroMovie();
+            } else {
+                launchMoviePlayback(0, `${app.name}`, app.name.toUpperCase());
+            }
+        }
+
+        function launchInputSource(id, title, subtitle) {
+            closeAllDrawers();
+            if (id === "livetv") {
+                openLiveTvDirect();
+                return;
+            }
+            launchMoviePlayback(0, `${title} — ${subtitle}`, "ΕΙΣΟΔΟΣ ΕΙΚΟΝΑΣ TV");
+        }
+
+        function closePlayerOverlay() {
+            playUiTick(240, 0.04);
+            isWatchingLiveTv = false;
+            const overlay = document.getElementById("player-overlay");
+            overlay.classList.add("hidden");
+            overlay.classList.remove("flex");
+        }
+
+        function togglePlayPause() {
+            playUiTick(350, 0.04);
+            isPlaying = !isPlaying;
+            const icon = document.getElementById("player-state-icon");
+            const label = document.getElementById("player-status-label");
+            if (isPlaying) {
+                icon.className = "ph-fill ph-pause text-4xl";
+                label.textContent = "Αναπαραγωγή σε εξέλιξη...";
+            } else {
+                icon.className = "ph-fill ph-play text-4xl";
+                label.textContent = "Σε Παύση";
+            }
+        }
+
+        function scrubVideo(e) {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const pct = Math.max(5, Math.min(98, Math.round(((e.clientX - rect.left) / rect.width) * 100)));
+            document.getElementById("player-progress-bar").style.width = pct + "%";
+        }
+
+        // --- 13. WORKING AI ASSISTANT (VOICE + GEMINI API + LIVE TV / NETFLIX) ---
+        function toggleAssistantPopup() {
+            playUiTick(460, 0.05);
+            closeAllDrawers();
+            const popup = document.getElementById("assistant-popup");
+            if (popup.classList.contains("hidden")) {
+                popup.classList.remove("hidden");
+                setTimeout(() => document.getElementById("assistant-input").focus(), 50);
+            } else {
+                popup.classList.add("hidden");
+            }
+        }
+
+        function closeAssistantPopup() {
+            document.getElementById("assistant-popup").classList.add("hidden");
+        }
+
+        function triggerQuickCommand(cmdText) {
+            document.getElementById("assistant-input").value = cmdText;
+            executeAssistantCommand();
+        }
+
+        async function executeAssistantCommand() {
+            const input = document.getElementById("assistant-input");
+            const query = input.value.trim();
+            if (!query) return;
+
+            const feedbackBox = document.getElementById("assistant-feedback");
+            const feedbackText = document.getElementById("assistant-feedback-text");
+            feedbackBox.classList.remove("hidden");
+            feedbackText.textContent = "Το AI ετοιμάζει την επιλογή σου...";
+
+            const lower = query.toLowerCase();
+
+            // 1. Check Live TV Channel request (e.g. "Βάλε MEGA / ANT1 / ALPHA / STAR / ΣΚΑΪ / ΕΡΤ / τηλεόραση")
+            for (let i = 0; i < liveTvChannels.length; i++) {
+                const chName = liveTvChannels[i].name.toLowerCase().split(" ")[0];
+                if (lower.includes(chName) || (lower.includes("τηλεόραση") && !lower.includes("ταιν"))) {
+                    const targetIdx = lower.includes(chName) ? i : currentChannelIdx;
+                    feedbackText.textContent = `Ανοίγω ${liveTvChannels[targetIdx].name}...`;
+                    setTimeout(() => {
+                        closeAssistantPopup();
+                        feedbackBox.classList.add("hidden");
+                        input.value = "";
+                        tuneLiveTvChannel(targetIdx);
+                    }, 700);
+                    return;
+                }
+            }
+
+            // 2. Direct App Launch check
+            for (const app of installedApps) {
+                if (lower.includes(app.name.toLowerCase()) && !lower.includes("ταιν") && !lower.includes("σειρ")) {
+                    feedbackText.textContent = `Ανοίγω το ${app.name}...`;
+                    setTimeout(() => {
+                        closeAssistantPopup();
+                        feedbackBox.classList.add("hidden");
+                        input.value = "";
+                        launchTvAppById(app.id);
+                    }, 750);
+                    return;
+                }
+            }
+
+            // 3. Call Gemini API to select the best Netflix movie & Watch ID
+            const apiKey = userGeminiKey || "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{ role: "user", parts: [{ text: query }] }],
+                systemInstruction: {
+                    parts: [{
+                        text: `Είσαι ο ενσωματωμένος AI βοηθός της τηλεόρασης Xiaomi TV Max 85" (2025). Ο χρήστης σου ζητάει να βάλεις μια ταινία ή σειρά στο Netflix. Διάλεξε μία κορυφαία πραγματική ταινία ή σειρά του Netflix που ταιριάζει απόλυτα και επίστρεψε JSON με title, category (στα Ελληνικά), shortDesc (στα Ελληνικά) και watchId (πραγματικό 8-ψήφιο Netflix ID π.χ. 81098494).`
+                    }]
+                },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            title: { type: "STRING" },
+                            category: { type: "STRING" },
+                            shortDesc: { type: "STRING" },
+                            watchId: { type: "STRING" }
+                        },
+                        required: ["title", "category", "shortDesc", "watchId"]
+                    }
+                }
+            };
+
+            let chosenMovie = null;
+            try {
+                const res = await fetch(apiUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (raw) chosenMovie = JSON.parse(raw);
+                }
+            } catch (e) {}
+
+            if (!chosenMovie) {
+                if (lower.includes("τρομ") || lower.includes("θρίλερ") || lower.includes("μυστ")) {
+                    chosenMovie = {
+                        title: "Stranger Things",
+                        category: "Θρίλερ • Υπερφυσικό • 4K HDR",
+                        shortDesc: "Στη μικρή πόλη Χόκινς, σκοτεινές δυνάμεις από το Upside Down απειλούν τους πάντες.",
+                        watchId: "80057281"
+                    };
+                } else if (lower.includes("sci-fi") || lower.includes("επιστημ") || lower.includes("διάστημ")) {
+                    chosenMovie = {
+                        title: "3 Body Problem",
+                        category: "Sci-Fi • Μυστήριο • 4K Dolby Vision",
+                        shortDesc: "Μια ομάδα κορυφαίων επιστημόνων αντιμετωπίζει τη μεγαλύτερη εξωγήινη απειλή της ανθρωπότητας.",
+                        watchId: "81024821"
+                    };
+                } else if (lower.includes("κωμωδ") || lower.includes("έγκλημ")) {
+                    chosenMovie = {
+                        title: "The Gentlemen",
+                        category: "Έγκλημα • Δράση • 4K Dolby Vision",
+                        shortDesc: "Όταν ο Έντι κληρονομεί την οικογενειακή έπαυλη, ανακαλύπτει μια τεράστια αυτοκρατορία του υποκόσμου.",
+                        watchId: "81437051"
+                    };
+                } else {
+                    chosenMovie = {
+                        title: "Extraction 2",
+                        category: "Δράση • Περιπέτεια • 4K Dolby Vision",
+                        shortDesc: "Ο Τάιλερ Ρέικ αναλαμβάνει μια καταιγιστική αποστολή διάσωσης υψηλού ρίσκου.",
+                        watchId: "81098494"
+                    };
+                }
+            }
+
+            document.getElementById("hero-title").textContent = chosenMovie.title;
+            document.getElementById("hero-category-pill").textContent = chosenMovie.category;
+            document.getElementById("hero-desc").textContent = chosenMovie.shortDesc;
+
+            feedbackText.textContent = `Ανοίγω Netflix • «${chosenMovie.title}»...`;
+
+            setTimeout(() => {
+                feedbackBox.classList.add("hidden");
+                closeAssistantPopup();
+                input.value = "";
+                launchMoviePlayback(0, chosenMovie.title, "NETFLIX", chosenMovie.watchId);
+            }, 1000);
+        }
+
+        function startGreekVoiceRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const micIcon = document.getElementById("popup-mic-icon");
+            const statusTitle = document.getElementById("assistant-status-title");
+
+            if (!SpeechRecognition) {
+                showTvToast("Πληκτρολόγησε την εντολή σου στο πεδίο");
+                document.getElementById("assistant-input").focus();
+                return;
+            }
+
+            try {
+                const recognition = new SpeechRecognition();
+                recognition.lang = "el-GR";
+                recognition.interimResults = false;
+
+                statusTitle.textContent = "Ακούω... Μίλησε τώρα";
+                micIcon.className = "ph-fill ph-record text-rose-400 animate-ping";
+
+                recognition.onresult = (event) => {
+                    const transcript = event.results[0][0].transcript;
+                    document.getElementById("assistant-input").value = transcript;
+                    executeAssistantCommand();
+                };
+
+                recognition.onend = () => {
+                    statusTitle.textContent = "Πες ή γράψε τι θέλεις...";
+                    micIcon.className = "ph-fill ph-microphone text-base";
+                };
+
+                recognition.start();
+            } catch (e) {
+                document.getElementById("assistant-input").focus();
+            }
+        }
+
+        // --- 14. DRAWERS, LIVE PICTURE/BRIGHTNESS & CONTEXT MENU ---
+        function closeAllDrawers() {
+            document.getElementById("inputs-drawer").classList.add("hidden");
+            document.getElementById("inputs-drawer").classList.remove("flex");
+            document.getElementById("settings-drawer").classList.add("hidden");
+            document.getElementById("settings-drawer").classList.remove("flex");
+        }
+
+        function toggleInputsDrawer() {
+            playUiTick(340, 0.04);
+            closeAssistantPopup();
+            const drawer = document.getElementById("inputs-drawer");
+            const isHidden = drawer.classList.contains("hidden");
+            closeAllDrawers();
+            if (isHidden) {
+                drawer.classList.remove("hidden");
+                drawer.classList.add("flex");
+            }
+        }
+
+        function toggleQuickSettingsDrawer() {
+            playUiTick(340, 0.04);
+            closeAssistantPopup();
+            const drawer = document.getElementById("settings-drawer");
+            const isHidden = drawer.classList.contains("hidden");
+            closeAllDrawers();
+            if (isHidden) {
+                drawer.classList.remove("hidden");
+                drawer.classList.add("flex");
+            }
+        }
+
+        function cyclePictureMode() {
+            playUiTick(380, 0.04);
+            picModeIdx = (picModeIdx + 1) % pictureModes.length;
+            const mode = pictureModes[picModeIdx];
+            document.getElementById("setting-pic-val").textContent = mode.name;
+            document.getElementById("player-badge-pic").textContent = mode.name.split(" ")[0];
+            applyScreenVisualFilters();
+            showTvToast(`Εικόνα: ${mode.name}`);
+        }
+
+        function cycleScreenBrightness() {
+            playUiTick(380, 0.04);
+            brightIdx = (brightIdx + 1) % brightnessLevels.length;
+            const b = brightnessLevels[brightIdx];
+            document.getElementById("setting-bright-val").textContent = b.name;
+            applyScreenVisualFilters();
+            showTvToast(`Φωτεινότητα: ${b.name}`);
+        }
+
+        function cycleAudioOutput() {
+            playUiTick(380, 0.04);
+            audioOutIdx = (audioOutIdx + 1) % audioOutputs.length;
+            const out = audioOutputs[audioOutIdx];
+            document.getElementById("setting-audio-val").textContent = out;
+            showTvToast(`Ήχος: ${out}`);
+        }
+
+        function boostTvRam() {
+            playUiTick(480, 0.06);
+            document.getElementById("setting-ram-val").textContent = "Η μνήμη καθαρίστηκε • Μέγιστη ταχύτητα";
+            showTvToast("Η μνήμη της τηλεόρασης καθαρίστηκε!");
+        }
+
+        function toggleUiSounds() {
+            uiSoundsEnabled = !uiSoundsEnabled;
+            const el = document.getElementById("setting-sound-val");
+            el.textContent = uiSoundsEnabled ? "Ενεργοί" : "Κλειστοί";
+            el.className = uiSoundsEnabled ? "text-[11px] text-emerald-300 font-medium" : "text-[11px] text-slate-400 font-medium";
+            if (uiSoundsEnabled) playUiTick(400, 0.04);
+        }
+
+        // Long-press OK on App Card -> Context Menu
+        function startOkButtonPress() {
+            okLongPressTriggered = false;
+            okPressTimer = setTimeout(() => {
+                okLongPressTriggered = true;
+                const items = getVisibleFocusableElements();
+                const focused = items[currentFocusIndex];
+                if (focused && focused.dataset.appIdx !== undefined) {
+                    openAppContextMenu(parseInt(focused.dataset.appIdx, 10));
+                } else {
+                    toggleQuickSettingsDrawer();
+                }
+            }, 550);
+        }
+
+        function endOkButtonPress() {
+            if (okPressTimer) {
+                clearTimeout(okPressTimer);
+                okPressTimer = null;
+            }
+            if (!okLongPressTriggered) {
+                pressDpadOk();
+            }
+        }
+
+        function openAppContextMenu(appIdx) {
+            playUiTick(450, 0.05);
+            selectedContextAppIdx = appIdx;
+            const app = installedApps[appIdx];
+            if (!app) return;
+            document.getElementById("ctx-app-title").textContent = app.name;
+            document.getElementById("ctx-app-pkg").textContent = app.pkg;
+            const modal = document.getElementById("app-context-modal");
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+        }
+
+        function closeAppContextMenu() {
+            const modal = document.getElementById("app-context-modal");
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        }
+
+        function ctxLaunchSelectedApp() {
+            const app = installedApps[selectedContextAppIdx];
+            closeAppContextMenu();
+            if (app) launchTvAppById(app.id);
+        }
+
+        function ctxMoveApp(dir) {
+            const targetIdx = selectedContextAppIdx + dir;
+            if (targetIdx < 0 || targetIdx >= installedApps.length) return;
+            const temp = installedApps[selectedContextAppIdx];
+            installedApps[selectedContextAppIdx] = installedApps[targetIdx];
+            installedApps[targetIdx] = temp;
+            selectedContextAppIdx = targetIdx;
+            renderAllViews();
+            showTvToast("Η σειρά των εφαρμογών άλλαξε");
+        }
+
+        function ctxClearAppCache() {
+            const app = installedApps[selectedContextAppIdx];
+            closeAppContextMenu();
+            if (app) showTvToast(`Έγινε εκκαθάριση: ${app.name}`);
+        }
+
+        function ctxToggleHideApp() {
+            toggleAppHomeVisibility(selectedContextAppIdx);
+            closeAppContextMenu();
+            showTvToast("Ενημερώθηκε η Αρχική Οθόνη");
+        }
+
+        // Setup & Python Code Modal
+        function openSetupModal() {
+            closeAllDrawers();
+            document.getElementById("cfg-bridge-url").value = bridgeUrl;
+            document.getElementById("cfg-gemini-key").value = userGeminiKey;
+            const modal = document.getElementById("setup-modal");
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+        }
+
+        function closeSetupModal() {
+            const modal = document.getElementById("setup-modal");
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        }
+
+        function saveBridgeSettings() {
+            bridgeUrl = document.getElementById("cfg-bridge-url").value.trim() || "http://localhost:8765";
+            userGeminiKey = document.getElementById("cfg-gemini-key").value.trim();
+            localStorage.setItem("xiaomi_bridge_url", bridgeUrl);
+            localStorage.setItem("xiaomi_gemini_key", userGeminiKey);
+            initHardwareBridge();
+            closeSetupModal();
+            showTvToast("Οι ρυθμίσεις αποθηκεύτηκαν!");
+        }
+
+        function copyPythonBridgeCode() {
+            const codeText = document.getElementById("python-bridge-code").innerText;
+            const tempArea = document.createElement("textarea");
+            tempArea.value = codeText;
+            document.body.appendChild(tempArea);
+            tempArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempArea);
+            showTvToast("Ο κώδικας αντιγράφηκε!");
+        }
+
+        // --- 15. TAB SWITCHING & D-PAD NAVIGATION ENGINE ---
+        function switchTab(tabName) {
+            playUiTick(320, 0.035);
+            activeTab = tabName;
+            closeAllDrawers();
+            ["home", "apps", "tv"].forEach(t => {
+                const view = document.getElementById(`view-${t}`);
+                const btn = document.getElementById(`tab-${t}`);
+                if (!view || !btn) return;
+                if (t === tabName) {
+                    view.classList.remove("hidden");
+                    btn.className = "tv-focusable nav-pill px-6 py-2 rounded-full text-sm font-bold tracking-wide transition-all bg-white text-slate-950 shadow-lg flex items-center gap-1.5";
+                } else {
+                    view.classList.add("hidden");
+                    btn.className = "tv-focusable nav-pill px-6 py-2 rounded-full text-sm font-medium tracking-wide text-slate-300 hover:text-white tv-glass-pill flex items-center gap-1.5";
+                }
+            });
+        }
+
+        function getVisibleFocusableElements() {
+            return Array.from(document.querySelectorAll(".tv-focusable")).filter(el => el.offsetParent !== null);
+        }
+
+        function focusElementAtIndex(idx) {
+            const items = getVisibleFocusableElements();
+            if (!items.length) return;
+            items.forEach(el => el.classList.remove("tv-focused"));
+            currentFocusIndex = (idx + items.length) % items.length;
+            const target = items[currentFocusIndex];
+            target.classList.add("tv-focused");
+            target.focus({ preventScroll: true });
+            target.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+        }
+
+        function navigateDpad(direction) {
+            // If watching Live TV, Up/Down changes TV channels directly!
+            const player = document.getElementById("player-overlay");
+            if (!player.classList.contains("hidden") && isWatchingLiveTv) {
+                if (direction === "up") { changeLiveTvChannel(1); return; }
+                if (direction === "down") { changeLiveTvChannel(-1); return; }
+            }
+
+            playUiTick(280, 0.025);
+            const items = getVisibleFocusableElements();
+            if (!items.length) return;
+
+            if (direction === "right") focusElementAtIndex(currentFocusIndex + 1);
+            else if (direction === "left") focusElementAtIndex(currentFocusIndex - 1);
+            else if (direction === "down") focusElementAtIndex(currentFocusIndex + 5);
+            else if (direction === "up") focusElementAtIndex(currentFocusIndex - 5);
+        }
+
+        function pressDpadOk() {
+            const items = getVisibleFocusableElements();
+            if (items[currentFocusIndex]) {
+                items[currentFocusIndex].click();
+            }
+        }
+
+        function pressRemoteBack() {
+            if (isCapturingRemoteKey) {
+                cancelKeyCaptureMode();
+                return;
+            }
+            playUiTick(220, 0.035);
+            const screensaver = document.getElementById("screensaver-overlay");
+            const mapperModal = document.getElementById("remote-mapper-modal");
+            const setupModal = document.getElementById("setup-modal");
+            const ctxModal = document.getElementById("app-context-modal");
+            const player = document.getElementById("player-overlay");
+            const popup = document.getElementById("assistant-popup");
+            const inputsDrawer = document.getElementById("inputs-drawer");
+            const settingsDrawer = document.getElementById("settings-drawer");
+
+            if (!screensaver.classList.contains("hidden")) {
+                toggleScreensaverMode();
+            } else if (!mapperModal.classList.contains("hidden")) {
+                closeRemoteMapperModal();
+            } else if (!setupModal.classList.contains("hidden")) {
+                closeSetupModal();
+            } else if (!ctxModal.classList.contains("hidden")) {
+                closeAppContextMenu();
+            } else if (!player.classList.contains("hidden")) {
+                closePlayerOverlay();
+            } else if (!popup.classList.contains("hidden")) {
+                closeAssistantPopup();
+            } else if (!inputsDrawer.classList.contains("hidden") || !settingsDrawer.classList.contains("hidden")) {
+                closeAllDrawers();
+            } else if (activeTab !== "home") {
+                switchTab("home");
+            }
+        }
+
+        function pressRemoteHome() {
+            isCapturingRemoteKey = false;
+            playUiTick(360, 0.04);
+            closeRemoteMapperModal();
+            closeSetupModal();
+            closeAppContextMenu();
+            closePlayerOverlay();
+            closeAssistantPopup();
+            closeAllDrawers();
+            switchTab("home");
+            focusElementAtIndex(5);
+        }
+
+        function toggleScreensaverMode() {
+            playUiTick(260, 0.05);
+            const el = document.getElementById("screensaver-overlay");
+            if (el.classList.contains("hidden")) {
+                el.classList.remove("hidden");
+                el.classList.add("flex");
+            } else {
+                el.classList.add("hidden");
+                el.classList.remove("flex");
+            }
+        }
+
+        function adjustTvVolume(delta) {
+            playUiTick(300, 0.02);
+            isMuted = false;
+            tvVolume = Math.max(0, Math.min(100, tvVolume + delta));
+            showVolumeOsd();
+        }
+
+        function toggleTvMute() {
+            playUiTick(260, 0.03);
+            isMuted = !isMuted;
+            showVolumeOsd();
+        }
+
+        function showVolumeOsd() {
+            const osd = document.getElementById("volume-osd");
+            const icon = document.getElementById("volume-osd-icon");
+            const bar = document.getElementById("volume-osd-bar");
+            const val = document.getElementById("volume-osd-val");
+
+            if (isMuted || tvVolume === 0) {
+                icon.className = "ph-fill ph-speaker-slash text-xl text-rose-400";
+                bar.style.height = "0%";
+                val.textContent = "ΣΙΓΑΣΗ";
+            } else {
+                icon.className = "ph-fill ph-speaker-high text-xl text-white";
+                bar.style.height = tvVolume + "%";
+                val.textContent = tvVolume;
+            }
+
+            osd.style.opacity = "1";
+            if (volumeTimeout) clearTimeout(volumeTimeout);
+            volumeTimeout = setTimeout(() => {
+                osd.style.opacity = "0";
+            }, 1800);
+        }
+
+        function showTvToast(msg) {
+            const toast = document.getElementById("tv-toast");
+            document.getElementById("tv-toast-text").textContent = msg;
+            toast.style.opacity = "1";
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.style.opacity = "0";
+            }, 2600);
+        }
+
+        function toggleRemoteVisibility() {
+            const remote = document.getElementById("xiaomi-remote");
+            const restoreBtn = document.getElementById("remote-restore-btn");
+            if (remote.classList.contains("hidden")) {
+                remote.classList.remove("hidden");
+                restoreBtn.classList.add("hidden");
+                restoreBtn.classList.remove("flex");
+            } else {
+                remote.classList.add("hidden");
+                restoreBtn.classList.remove("hidden");
+                restoreBtn.classList.add("flex");
+            }
+        }
+
+        function toggleFullScreenMode() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                document.exitFullscreen().catch(() => {});
+            }
+        }
+
+        // --- 16. HARDWARE REMOTE KEYCODE & KEY LEARNING INTERCEPTOR ---
+        window.addEventListener("keydown", (e) => {
+            if (document.activeElement && document.activeElement.tagName === "INPUT") {
+                if (e.key === "Escape") pressRemoteBack();
+                return;
+            }
+
+            // STEP 1 INTERCEPT: If waiting for user to press a remote button to learn it!
+            if (isCapturingRemoteKey) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (e.key === "Escape") {
+                    cancelKeyCaptureMode();
+                    return;
+                }
+                const keyIdentifier = e.code || e.key || `KeyCode_${e.keyCode}`;
+                const cleanKeyName = e.key && e.key.length === 1 ? e.key.toUpperCase() : (e.code || e.key);
+                const readableLabel = `Κουμπί [${cleanKeyName}] (Κωδικός ${e.keyCode || 0})`;
+                onRemoteKeyCaptured(keyIdentifier, readableLabel);
+                return;
+            }
+
+            // Check if the pressed physical key has been programmed by the user!
+            const pressedId = e.code || e.key;
+            if (customKeyBindings[pressedId]) {
+                e.preventDefault();
+                executeRemoteActionById(customKeyBindings[pressedId].actionId);
+                return;
+            }
+
+            // Standard Navigation & TV Remote Hardware Keys
+            if (e.key === "ArrowRight") { e.preventDefault(); navigateDpad("right"); }
+            else if (e.key === "ArrowLeft") { e.preventDefault(); navigateDpad("left"); }
+            else if (e.key === "ArrowDown" || e.key === "ChannelDown") { e.preventDefault(); navigateDpad("down"); }
+            else if (e.key === "ArrowUp" || e.key === "ChannelUp") { e.preventDefault(); navigateDpad("up"); }
+            else if (e.key === "Escape" || e.key === "Backspace" || e.key === "BrowserBack") {
+                e.preventDefault();
+                pressRemoteBack();
+            }
+            else if (e.key === " " || e.key === "AudioRecord" || e.keyCode === 219) {
+                e.preventDefault();
+                toggleAssistantPopup();
+            }
+            else if (e.key.toLowerCase() === "i" || e.key === "TVInput") {
+                e.preventDefault();
+                toggleInputsDrawer();
+            }
+            else if (e.key.toLowerCase() === "m" || e.key === "ContextMenu" || e.key === "Settings") {
+                e.preventDefault();
+                toggleQuickSettingsDrawer();
+            }
+            else if (e.key.toLowerCase() === "h" || e.key === "Home") {
+                e.preventDefault();
+                pressRemoteHome();
+            }
+        });
+
+        function updateClock() {
+            const now = new Date();
+            const hh = String(now.getHours()).padStart(2, "0");
+            const mm = String(now.getMinutes()).padStart(2, "0");
+            const timeStr = `${hh}:${mm}`;
+            document.getElementById("tv-clock").textContent = timeStr;
+            const scClock = document.getElementById("screensaver-clock");
+            if (scClock) scClock.textContent = timeStr;
+        }
+
+        window.onload = function () {
+            initHardwareBridge();
+            updateClock();
+            setInterval(updateClock, 10000);
+            focusElementAtIndex(5);
+        };
+    </script>
+</body>
+</html>
